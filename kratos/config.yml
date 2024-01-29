@@ -1,0 +1,112 @@
+version: v1.0.0
+
+serve:
+  public:
+    port: 4533
+    base_url: http://localhost:4533
+    request_log:
+      disable_for_health: true
+  admin:
+    port: 4534
+    base_url: http://localhost:4534
+    request_log:
+      disable_for_health: true
+
+dsn: postgres://kratos:secret@db-kratos:5432/kratos?sslmode=disable&max_conns=20&max_idle_conns=4
+
+selfservice:
+  default_browser_return_url: http://localhost:8000
+  allowed_return_urls:
+    - http://localhost:8000
+  methods:
+    password:
+      enabled: true
+      config:
+        haveibeenpwned_enabled: true
+        min_password_length: 8
+        identifier_similarity_check_enabled: true
+    code:
+      enabled: true
+      # passwordless_enabled: true
+    profile:
+      enabled: true
+    # webauthn:
+    #   config:
+    #     passwordless: false
+    #     rp:
+    #       display_name: SAMPLE_NAME
+    #       id: localhsot
+    #       origin: http://localhost:8000
+    #   enabled: true
+  flows:
+    registration:
+      enabled: true
+      after:
+        password:
+          hooks:
+            - hook: session
+    verification:
+      enabled: true
+    recovery:
+      ui_url: http://localhost:8000
+      enabled: true
+      use: code 
+      notify_unknown_recipients: true
+      after:
+        default_browser_return_url: http://localhost:8000
+    settings:
+      privileged_session_max_age: 1h
+      required_aal: highest_available
+      ui_url: http://localhost:8000
+    login:
+      after:
+        hooks:
+          - hook: require_verified_address
+    logout:
+      after:
+        default_browser_return_url: http://localhost:8000/auth/login
+
+identity:
+  default_schema_id: user_v1
+  schemas:
+    - id: user_v1
+      url: file:///etc/config/kratos/identity.schema.user_v1.json
+
+session:
+  cookie:
+    name: "kratos_session"
+  whoami:
+    required_aal: highest_available
+
+cookies:
+  same_site: Lax
+  path: /
+  domain: localhost
+
+secrets:
+  cookie:
+    - ipsumipsumipsumi
+  cipher:
+    - ipsumipsumipsumipsumipsumipsumip
+  default:
+    - ipsumipsumipsumi
+
+hashers:
+  algorithm: argon2
+  argon2:
+    memory: 32MB
+    iterations: 1
+    parallelism: 1
+    salt_length: 16
+    key_length: 16
+
+courier:
+  smtp:
+    connection_uri: smtps://test:test@mailslurper:1025/?skip_ssl_verify=true
+    from_address: "noreply@local"
+    from_name: "kratos"
+
+log:
+  level: trace
+  format: json
+  leak_sensitive_values: false
