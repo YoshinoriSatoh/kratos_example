@@ -25,19 +25,19 @@ docker-compose.yaml で以下のコンテナが起動します。
 | ---- | ---- | ---- |
 | browser | registration | registration_browser.sh |
 | browser | login | login_browser.sh |
-| browser | logout | logout_browser.sh |
+| browser | check session | whoami_browser.sh |
 | browser | verification | verification_browser.sh |
 | browser | recovery | recovery_browser.sh |
 | browser | settings (password) | settings_password_browser.sh |
 | browser | settings (profile) | settings_profile_browser.sh |
-| browser | check session | whoami_browser.sh |
+| browser | logout | logout_browser.sh |
 | api | registration | registration_api.sh |
 | api | login | login_api.sh |
-| api | logout | logout_api.sh |
+| api | check session | whoami_api.sh |
 | api | verification | verification_api.sh |
 | api | settings (password) | settings_password_api.sh |
 | api | settings (profile) | settings_profile_api.sh |
-| api | check session | whoami_api.sh |
+| api | logout | logout_api.sh |
 
 **注意点**
 
