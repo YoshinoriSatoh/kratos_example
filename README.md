@@ -114,11 +114,11 @@ docker compose up
 
 ### ユーザー登録
 以下が実行されます。
-1. Registration flow初期化APIが呼び出される
-2. Registration flow送信APIが呼び出される(method: password)
-3. 2.によってVerification flowが実行され、メールアドレス検証メールが送信される
-4. メールアドレス検証メールを確認し、プロンプトに6桁の検証コードを入力する
-5. Verification flow(mothod: code)送信APIが呼び出される
+1. Registration flow初期化API
+2. Registration flow送信API(method: password)
+3. 3. 2.で実行されたVerification flowによるメールアドレス検証メール確認 ov
+4. メールアドレス検証メールを確認し、プロンプトに6桁の検証コードを入力
+5. Verification flow(mothod: code)送信API
 
 #### コマンド実行手順
 ```
@@ -150,17 +150,19 @@ Registration flowの初期化を行います。
 
 レスポンスには、flow id等の他、uiという項目が含まれています。
 
-uiで返却された項目は、UIのレンダリングに使用します。
+uiで返却された項目は、本来はUIのレンダリングに使用します。
 
 [ドキュメントによると](https://www.ory.sh/docs/kratos/self-service#form-rendering-1)、SPAの場合も[サーバサイドレンダリングの場合と同様に](https://www.ory.sh/docs/kratos/self-service#form-rendering)レンダリングする必要があるとのことです。
 
-**フォームレンダリング**
+但し、本サンプルではcurlを使用していますので、UIレンダリングの過程は省いています。
+
+**フォームレンダリング例**
 ```html
-<form action="http://localhost:4533/self-service/registration?flow=601015e9-e5e2-46fa-83f8-db5fb332535e" method="POST">
+<form action="http://localhost:4533/self-service/registration?flow=65bcf3af-5b7d-4daa-a556-6a2443b8d52d" method="POST">
   <input
     name="csrf_token"
     type="hidden"
-    value="rKZzgTZOs5AqAbjrXZJmngsV60aTDZztIvejmqO8h4bh1ir5xSaZGkkMUE2JuldooHyV3xHReNUQCTw8OFEpyQ=="
+    value="esIfcdIQhbArLsvpsVir0pOiXWdc6FGKyZLg/S7cKN+83orzcSTk5Z7NMc6GeUUxO8tdaQocu7sYorTcRunAVQ=="
   />
   <fieldset>
     <label>
@@ -194,13 +196,13 @@ uiで返却された項目は、UIのレンダリングに使用します。
 **レスポンス例**
 ```json
 {
-  "id": "601015e9-e5e2-46fa-83f8-db5fb332535e",
+  "id": "65bcf3af-5b7d-4daa-a556-6a2443b8d52d",
   "type": "browser",
-  "expires_at": "2024-01-31T02:38:58.256733884Z",
-  "issued_at": "2024-01-31T01:38:58.256733884Z",
+  "expires_at": "2024-01-31T04:53:49.281479005Z",
+  "issued_at": "2024-01-31T03:53:49.281479005Z",
   "request_url": "http://localhost:4533/self-service/registration/browser",
   "ui": {
-    "action": "http://localhost:4533/self-service/registration?flow=601015e9-e5e2-46fa-83f8-db5fb332535e",
+    "action": "http://localhost:4533/self-service/registration?flow=65bcf3af-5b7d-4daa-a556-6a2443b8d52d",
     "method": "POST",
     "nodes": [
       {
@@ -209,7 +211,7 @@ uiで返却された項目は、UIのレンダリングに使用します。
         "attributes": {
           "name": "csrf_token",
           "type": "hidden",
-          "value": "rKZzgTZOs5AqAbjrXZJmngsV60aTDZztIvejmqO8h4bh1ir5xSaZGkkMUE2JuldooHyV3xHReNUQCTw8OFEpyQ==",
+          "value": "esIfcdIQhbArLsvpsVir0pOiXWdc6FGKyZLg/S7cKN+83orzcSTk5Z7NMc6GeUUxO8tdaQocu7sYorTcRunAVQ==",
           "required": true,
           "disabled": false,
           "node_type": "input"
@@ -334,129 +336,420 @@ endpoint: `POST {{ kratos public endpoint }}/self-service/registration/browser`
 
 (curlの場合は明示的にcookieを付与していますが、ブラウザの場合は意識することはありません。)
 
+レスポンスの`continue_with.flow.url`にリダイレクト先のURLが含まれています。
+
+Identity schemaで、emailをcredentialsに指定している場合、Registration flowの実行API(method: password)を実行時に、メールアドレスを検証するためのVerification flowが実行されます。
+
+Registration flowからVerification flowへ切り替わるため、次のflowを継続するための情報が`continue_with`に含まれています。
+
+2024年1月現在、ドキュメントに明確な記載はないようなのですが、UI側で`continue_with.flow.url`へリダイレクトし、クエリパラメータで指定されたflow idから、以下のVerification flow取得APIを呼び出して、Verification flowを実行してほしいという意図があるのではないかと思います。
+
+（本サンプルでは、curlを使用しているため、レンダリングの過程は省いています。）
+
 **レスポンス例**
 ```json
 {
   "session": {
-    "id": "c4a0ea06-aa8e-432a-8134-0c7962b366a4",
+    "id": "f5fc03b7-f923-4b80-a802-2847fd4c1796",
     "active": true,
-    "expires_at": "2024-02-01T01:38:58.687117426Z",
-    "authenticated_at": "2024-01-31T01:38:58.699166843Z",
+    "expires_at": "2024-02-01T03:53:49.79546688Z",
+    "authenticated_at": "2024-01-31T03:53:49.800609505Z",
     "authenticator_assurance_level": "aal1",
     "authentication_methods": [
       {
         "method": "password",
         "aal": "aal1",
-        "completed_at": "2024-01-31T01:38:58.687116551Z"
+        "completed_at": "2024-01-31T03:53:49.79546663Z"
       }
     ],
-    "issued_at": "2024-01-31T01:38:58.687117426Z",
+    "issued_at": "2024-01-31T03:53:49.79546688Z",
     "identity": {
-      "id": "41fecaf9-5d31-4b55-9304-4dec3635f199",
+      "id": "793126a9-3c8b-43ec-89d0-e48395235131",
       "schema_id": "user_v1",
       "schema_url": "http://localhost:4533/schemas/dXNlcl92MQ",
       "state": "active",
-      "state_changed_at": "2024-01-31T01:38:58.668492843Z",
+      "state_changed_at": "2024-01-31T03:53:49.789625713Z",
       "traits": {
         "email": "1@local"
       },
       "verifiable_addresses": [
         {
-          "id": "24a98598-ec75-438a-a81b-8615ff63fd3f",
+          "id": "a7d3f207-0a8d-47af-b0fb-576806a1bcde",
           "value": "1@local",
           "verified": false,
           "via": "email",
           "status": "sent",
-          "created_at": "2024-01-31T01:38:58.673568Z",
-          "updated_at": "2024-01-31T01:38:58.673568Z"
+          "created_at": "2024-01-31T03:53:49.7915Z",
+          "updated_at": "2024-01-31T03:53:49.7915Z"
         }
       ],
       "recovery_addresses": [
         {
-          "id": "ebe87084-18cc-43f4-b2ed-127f04c94a4f",
+          "id": "694551fc-4074-4b92-b8e2-8cfe0a67c2e6",
           "value": "1@local",
           "via": "email",
-          "created_at": "2024-01-31T01:38:58.676839Z",
-          "updated_at": "2024-01-31T01:38:58.676839Z"
+          "created_at": "2024-01-31T03:53:49.792294Z",
+          "updated_at": "2024-01-31T03:53:49.792294Z"
         }
       ],
       "metadata_public": null,
-      "created_at": "2024-01-31T01:38:58.671179Z",
-      "updated_at": "2024-01-31T01:38:58.671179Z"
+      "created_at": "2024-01-31T03:53:49.790597Z",
+      "updated_at": "2024-01-31T03:53:49.790597Z"
     },
     "devices": [
       {
-        "id": "71d91744-50e6-411a-bad6-3002205eedba",
-        "ip_address": "192.168.65.1:37958",
+        "id": "27a7e329-858b-4ed0-bb81-69506551f53f",
+        "ip_address": "192.168.65.1:38530",
         "user_agent": "curl/7.87.0",
         "location": ""
       }
     ]
   },
   "identity": {
-    "id": "41fecaf9-5d31-4b55-9304-4dec3635f199",
+    "id": "793126a9-3c8b-43ec-89d0-e48395235131",
     "schema_id": "user_v1",
     "schema_url": "http://localhost:4533/schemas/dXNlcl92MQ",
     "state": "active",
-    "state_changed_at": "2024-01-31T01:38:58.668492843Z",
+    "state_changed_at": "2024-01-31T03:53:49.789625713Z",
     "traits": {
       "email": "1@local"
     },
     "verifiable_addresses": [
       {
-        "id": "24a98598-ec75-438a-a81b-8615ff63fd3f",
+        "id": "a7d3f207-0a8d-47af-b0fb-576806a1bcde",
         "value": "1@local",
         "verified": false,
         "via": "email",
         "status": "sent",
-        "created_at": "2024-01-31T01:38:58.673568Z",
-        "updated_at": "2024-01-31T01:38:58.673568Z"
+        "created_at": "2024-01-31T03:53:49.7915Z",
+        "updated_at": "2024-01-31T03:53:49.7915Z"
       }
     ],
     "recovery_addresses": [
       {
-        "id": "ebe87084-18cc-43f4-b2ed-127f04c94a4f",
+        "id": "694551fc-4074-4b92-b8e2-8cfe0a67c2e6",
         "value": "1@local",
         "via": "email",
-        "created_at": "2024-01-31T01:38:58.676839Z",
-        "updated_at": "2024-01-31T01:38:58.676839Z"
+        "created_at": "2024-01-31T03:53:49.792294Z",
+        "updated_at": "2024-01-31T03:53:49.792294Z"
       }
     ],
     "metadata_public": null,
-    "created_at": "2024-01-31T01:38:58.671179Z",
-    "updated_at": "2024-01-31T01:38:58.671179Z"
+    "created_at": "2024-01-31T03:53:49.790597Z",
+    "updated_at": "2024-01-31T03:53:49.790597Z"
   },
   "continue_with": [
     {
       "action": "show_verification_ui",
       "flow": {
-        "id": "d229d11d-8273-4b7e-b05e-57490c0310f0",
+        "id": "af77553e-ae12-43b9-aaaa-7c5c167eb8a6",
         "verifiable_address": "1@local",
-        "url": "https://www.ory.sh/kratos/docs/fallback/verification?flow=d229d11d-8273-4b7e-b05e-57490c0310f0"
+        "url": "http://localhost:8000/auth/verification?flow=af77553e-ae12-43b9-aaaa-7c5c167eb8a6"
       }
     }
   ]
 }
 ```
 
-#### 3. 2.によってVerification flowが実行され、メールアドレス検証メールが送信される
-Identity schemaで、emailをcredentialsに指定している場合、Registration flowの実行API(method: password)を実行時に、メールアドレスを検証するためのVerification flowが実行されます。
+#### 3. 2.で実行されたVerification flowによるメールアドレス検証メール確認
+2.で実行されたVerification flowによって、メールアドレス検証用のメールアドレスが送信されています。
 
-メールアドレス検証用のメールアドレスが送信され、メール本文中には6桁の検証コードが記載されています。
-
-[mailslurper console](http://localhost:4436)へアクセスすることで、ローカルで受信メールを確認できます。
+メール本文中には6桁の検証コードが記載されており、[mailslurper console](http://localhost:4436)へアクセスすることで、ローカルで受信メールを確認できます。
 
 **メールアドレス検証メール例**
 ```
 Hi, please verify your account by entering the following code: 312996 or clicking the following link: http://localhost:4533/self-service/verification?code=312996&flow=d229d11d-8273-4b7e-b05e-57490c0310f0
 ```
 
-#### 4. メールアドレス検証メールを確認し、プロンプトに6桁の検証コードを入力する
+#### 4. メールアドレス検証メールを確認し、プロンプトに6桁の検証コードを入力
 メール本文中に記載されている6桁の検証コードを以下のプロンプトに入力し、Enterキーを押下すると、5. Verification flow(mothod: code)送信APIが実行されます。
 
 ```
 please input code emailed to you:
 ```
 
-#### 5. Verification flow(mothod: code)送信APIが呼び出される
+#### 5. Verification flow(mothod: code)送信API
+
+endpoint: `POST {{ kratos public endpoint }}/self-service/verification`
+
+[APIドキュメント](https://www.ory.sh/docs/kratos/reference/api#tag/frontend/operation/updateVerificationFlow)
+
 Verification flow(mothod: code)送信APIが呼び出し、メールアドレスが検証された状態となります。
+
+
+
+### ログイン
+以下が実行されます。
+1. Login flow初期化API
+2. Login flow送信API
+
+#### コマンド実行手順
+```
+./scripts/login_browser.sh <email> <password>
+```
+
+#### 実行例
+```
+./scripts/login_browser.sh 1@local overwatch2023
+```
+
+#### 1. Login flowの初期化API
+
+endpoint: `GET {{ kratos public endpoint }}/self-service/login/browser`
+
+[APIドキュメント](https://www.ory.sh/docs/kratos/reference/api#tag/frontend/operation/createBrowserLoginFlow)
+
+Login flowの初期化を行います。
+
+[Registration flowと同様に](https://github.com/YoshinoriSatoh/kratos_selfservice_example?tab=readme-ov-file#1-registration-flow%E3%81%AE%E5%88%9D%E6%9C%9F%E5%8C%96api)、uiの内容に従ってUIをレンダリングします。
+
+**レスポンス例**
+```json
+{
+  "id": "85a83b3d-835a-4ef1-a2e3-2e7d7cf8f826",
+  "type": "browser",
+  "expires_at": "2024-01-31T05:08:59.442571343Z",
+  "issued_at": "2024-01-31T04:08:59.442571343Z",
+  "request_url": "http://localhost:4533/self-service/login/browser",
+  "ui": {
+    "action": "http://localhost:4533/self-service/login?flow=85a83b3d-835a-4ef1-a2e3-2e7d7cf8f826",
+    "method": "POST",
+    "nodes": [
+      {
+        "type": "input",
+        "group": "default",
+        "attributes": {
+          "name": "csrf_token",
+          "type": "hidden",
+          "value": "Dx5gyPsVHX1U2OYriH8qYxLT/6P8G5TuyROFqhyNGUQI4zMPaE0vrTC3jFmNBYHuofb9KUgN4/bzdc9yunIpXg==",
+          "required": true,
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {}
+      },
+      {
+        "type": "input",
+        "group": "default",
+        "attributes": {
+          "name": "identifier",
+          "type": "text",
+          "value": "",
+          "required": true,
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {
+          "label": {
+            "id": 1070004,
+            "text": "ID",
+            "type": "info"
+          }
+        }
+      },
+      {
+        "type": "input",
+        "group": "password",
+        "attributes": {
+          "name": "password",
+          "type": "password",
+          "required": true,
+          "autocomplete": "current-password",
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {
+          "label": {
+            "id": 1070001,
+            "text": "Password",
+            "type": "info"
+          }
+        }
+      },
+      {
+        "type": "input",
+        "group": "password",
+        "attributes": {
+          "name": "method",
+          "type": "submit",
+          "value": "password",
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {
+          "label": {
+            "id": 1010001,
+            "text": "Sign in",
+            "type": "info",
+            "context": {}
+          }
+        }
+      }
+    ]
+  },
+  "created_at": "2024-01-31T04:08:59.446151Z",
+  "updated_at": "2024-01-31T04:08:59.446151Z",
+  "refresh": false,
+  "requested_aal": "aal1"
+}
+```
+
+#### 2. Login flowの送信API
+
+1.で初期化したLogin flowを実行します。
+
+session情報が返却されます。
+
+```json
+{
+  "session": {
+    "id": "0f867e3b-7c89-432c-9368-f021f4f686d4",
+    "active": true,
+    "expires_at": "2024-02-01T04:08:59.829461593Z",
+    "authenticated_at": "2024-01-31T04:08:59.829461593Z",
+    "authenticator_assurance_level": "aal1",
+    "authentication_methods": [
+      {
+        "method": "password",
+        "aal": "aal1",
+        "completed_at": "2024-01-31T04:08:59.829459176Z"
+      }
+    ],
+    "issued_at": "2024-01-31T04:08:59.829461593Z",
+    "identity": {
+      "id": "793126a9-3c8b-43ec-89d0-e48395235131",
+      "schema_id": "user_v1",
+      "schema_url": "http://localhost:4533/schemas/dXNlcl92MQ",
+      "state": "active",
+      "state_changed_at": "2024-01-31T03:53:49.789625Z",
+      "traits": {
+        "email": "1@local"
+      },
+      "verifiable_addresses": [
+        {
+          "id": "a7d3f207-0a8d-47af-b0fb-576806a1bcde",
+          "value": "1@local",
+          "verified": true,
+          "via": "email",
+          "status": "completed",
+          "verified_at": "2024-01-31T04:08:28.273878Z",
+          "created_at": "2024-01-31T03:53:49.7915Z",
+          "updated_at": "2024-01-31T03:53:49.7915Z"
+        }
+      ],
+      "recovery_addresses": [
+        {
+          "id": "694551fc-4074-4b92-b8e2-8cfe0a67c2e6",
+          "value": "1@local",
+          "via": "email",
+          "created_at": "2024-01-31T03:53:49.792294Z",
+          "updated_at": "2024-01-31T03:53:49.792294Z"
+        }
+      ],
+      "metadata_public": null,
+      "created_at": "2024-01-31T03:53:49.790597Z",
+      "updated_at": "2024-01-31T03:53:49.790597Z"
+    },
+    "devices": [
+      {
+        "id": "98e9b8cc-5ffb-446c-b76d-7383b112600d",
+        "ip_address": "192.168.65.1:38548",
+        "user_agent": "curl/7.87.0",
+        "location": ""
+      }
+    ]
+  }
+}
+```
+
+
+
+
+### ログインセッション取得
+以下が実行されます。
+1. Login session取得API
+
+#### コマンド実行手順
+```
+./scripts/whoami_browser.sh <email> <password>
+```
+
+#### 実行例
+```
+./scripts/whoami_browser.sh
+```
+
+#### 1. Login session取得API
+
+endpoint: `GET {{ kratos public endpoint }}/sessions/whoami`
+
+[APIドキュメント](https://www.ory.sh/docs/kratos/reference/api#tag/frontend/operation/toSession)
+
+ログイン中のセッションが有効であれば、セッション情報が返却されます。
+
+セッション情報取得の他、現在ログイン中であるかどうかを確認するエンドポイントでもあります。
+
+**レスポンス例**
+```json
+{
+  "id": "0f867e3b-7c89-432c-9368-f021f4f686d4",
+  "active": true,
+  "expires_at": "2024-02-01T04:08:59.829461Z",
+  "authenticated_at": "2024-01-31T04:08:59.829461Z",
+  "authenticator_assurance_level": "aal1",
+  "authentication_methods": [
+    {
+      "method": "password",
+      "aal": "aal1",
+      "completed_at": "2024-01-31T04:08:59.829459176Z"
+    }
+  ],
+  "issued_at": "2024-01-31T04:08:59.829461Z",
+  "identity": {
+    "id": "793126a9-3c8b-43ec-89d0-e48395235131",
+    "schema_id": "user_v1",
+    "schema_url": "http://localhost:4533/schemas/dXNlcl92MQ",
+    "state": "active",
+    "state_changed_at": "2024-01-31T03:53:49.789625Z",
+    "traits": {
+      "email": "1@local"
+    },
+    "verifiable_addresses": [
+      {
+        "id": "a7d3f207-0a8d-47af-b0fb-576806a1bcde",
+        "value": "1@local",
+        "verified": true,
+        "via": "email",
+        "status": "completed",
+        "verified_at": "2024-01-31T04:08:28.273878Z",
+        "created_at": "2024-01-31T03:53:49.7915Z",
+        "updated_at": "2024-01-31T03:53:49.7915Z"
+      }
+    ],
+    "recovery_addresses": [
+      {
+        "id": "694551fc-4074-4b92-b8e2-8cfe0a67c2e6",
+        "value": "1@local",
+        "via": "email",
+        "created_at": "2024-01-31T03:53:49.792294Z",
+        "updated_at": "2024-01-31T03:53:49.792294Z"
+      }
+    ],
+    "metadata_public": null,
+    "created_at": "2024-01-31T03:53:49.790597Z",
+    "updated_at": "2024-01-31T03:53:49.790597Z"
+  },
+  "devices": [
+    {
+      "id": "98e9b8cc-5ffb-446c-b76d-7383b112600d",
+      "ip_address": "192.168.65.1:38548",
+      "user_agent": "curl/7.87.0",
+      "location": ""
+    }
+  ]
+}
+```

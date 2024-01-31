@@ -1,23 +1,34 @@
 version: v1.0.0
 
+identity:
+  default_schema_id: user_v1
+  schemas:
+    - id: user_v1
+      url: file:///etc/config/kratos/identity.schema.user_v1.json
+
+dsn: postgres://kratos:secret@db-kratos:5432/kratos?sslmode=disable&max_conns=20&max_idle_conns=4
+
 serve:
   public:
     port: 4533
     base_url: http://localhost:4533
+    # cors: リバースプロキシ等を挟まない場合は、セキュリティのためCORS設定が必要
+    # tls: リバースプロキシ等でTLSを終端させない場合は、セキュリティのためTLS設定が必要
     request_log:
       disable_for_health: true
   admin:
     port: 4534
     base_url: http://localhost:4534
+    # cors: リバースプロキシ等を挟まない場合は、セキュリティのためCORS設定が必要
+    # tls: リバースプロキシ等でTLSを終端させない場合は、セキュリティのためTLS設定が必要
     request_log:
       disable_for_health: true
 
-dsn: postgres://kratos:secret@db-kratos:5432/kratos?sslmode=disable&max_conns=20&max_idle_conns=4
-
 selfservice:
-  default_browser_return_url: http://localhost:8000
+  default_browser_return_url: http://localhost:8000/auth
   allowed_return_urls:
-    - http://localhost:8000
+    - http://localhost:8000/auth
+    - http://localhost:8000/auth/login
   methods:
     password:
       enabled: true
@@ -30,64 +41,34 @@ selfservice:
   flows:
     registration:
       enabled: true
+      ui_url: http://localhost:8000/auth/registration
       after:
         password:
           hooks:
             - hook: session
     verification:
       enabled: true
+      ui_url: http://localhost:8000/auth/verification
     recovery:
-      ui_url: http://localhost:8000
       enabled: true
+      ui_url: http://localhost:8000/auth/recovery
       use: code 
-      notify_unknown_recipients: true
-      after:
-        default_browser_return_url: http://localhost:8000
     settings:
-      privileged_session_max_age: 1h
-      required_aal: highest_available
-      ui_url: http://localhost:8000
+      ui_url: http://localhost:8000/auth/settings
     login:
+      ui_url: http://localhost:8000/auth/login
       after:
         hooks:
           - hook: require_verified_address
     logout:
       after:
         default_browser_return_url: http://localhost:8000/auth/login
-
-identity:
-  default_schema_id: user_v1
-  schemas:
-    - id: user_v1
-      url: file:///etc/config/kratos/identity.schema.user_v1.json
+    error:
+      ui_url: http://localhost:8000/auth/error
 
 session:
   cookie:
     name: "kratos_session"
-  whoami:
-    required_aal: highest_available
-
-# cookies:
-#   same_site: Lax
-#   path: /
-#   domain: localhost
-
-secrets:
-  cookie:
-    - ipsumipsumipsumi
-  cipher:
-    - ipsumipsumipsumipsumipsumipsumip
-  default:
-    - ipsumipsumipsumi
-
-hashers:
-  algorithm: argon2
-  argon2:
-    memory: 32MB
-    iterations: 1
-    parallelism: 1
-    salt_length: 16
-    key_length: 16
 
 courier:
   smtp:
