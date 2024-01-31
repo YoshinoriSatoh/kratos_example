@@ -3,24 +3,9 @@
 IFS='
 '
 
-updateEmail=$1
-if [ -z "$updateEmail" ]; then
-  updateEmail=updated-1@local
-fi
-
 updatePassword=$2
 if [ -z "$updatePassword" ]; then
   updatePassword=updated-overwatch2024
-fi
-
-updateNickname=$3
-if [ -z "$updateNickname" ]; then
-  updateNickname=updated-nickname
-fi
-
-updateBirthdate=$4
-if [ -z "$updateBirthdate" ]; then
-  updateBirthdate=2000-01-01
 fi
 
 publicEndpoint=http://localhost:4533
@@ -53,22 +38,16 @@ responseCompleteSettingsFlow=$(curl -v -s -X POST \
   "$actionUrl")
 echo $responseCompleteSettingsFlow | jq 
 
+read -p "please input code emailed to you: " code
 
-echo "------------- [create settings flow (method: profile)] -------------"
-responseCreateSettingsFlow=$(curl -v -s -X GET \
+verificationFlowId=$(echo $responseCompleteSettingsFlow | jq -r -c '.continue_with[] | select(.action=="show_verification_ui") | .flow.id')
+echo $verificationFlowId 
+
+echo "\n\n\n------------- [complete verification flow (send verification flow)] -------------"
+responseUpdateVerificationFlow=$(curl -v -s -X POST \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -H "X-Session-Token: $sessionToken" \
-  $publicEndpoint/self-service/settings/api)
-echo $responseCreateSettingsFlow | jq 
+  -d '{"code": "'$code'", "method": "code"}' \
+  "$publicEndpoint/self-service/verification?flow=$verificationFlowId")
+echo $responseUpdateVerificationFlow | jq 
 
-actionUrl=$(echo $responseCreateSettingsFlow | jq -r '.ui.action')
-
-echo "\n\n\n------------- [complete settings flow (method: profile)] -------------"
-responseCompleteSettingsFlow=$(curl -v -s -X POST \
-  -H "Accept: application/json" \
-  -H "Content-Type: application/json" \
-  -H "X-Session-Token: $sessionToken" \
-  -d '{"method": "profile", "traits": { "email": "'$updateEmail'", "nickname": "'$updateNickname'", "birthdate": "'$updateBirthdate'" }}' \
-  "$actionUrl")
-echo $responseCompleteSettingsFlow | jq 

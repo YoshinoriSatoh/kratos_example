@@ -46,8 +46,3 @@ responseUpdateVerificationFlow=$(curl -v -s -X POST \
   "$publicEndpoint/self-service/verification?flow=$verificationFlowId")
 echo $responseUpdateVerificationFlow | jq 
 
-identityId=$(echo $responseUpdateRegistrationFlow | jq -r '.identity.id')
-echo $identityId
-traits=$(echo $responseUpdateRegistrationFlow | jq -r '.identity.traits' | jq -r '@json' )
-echo $traits
-

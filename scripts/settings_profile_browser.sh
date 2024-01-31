@@ -3,42 +3,47 @@
 IFS='
 '
 
-email=$1
-if [ -z "$email" ]; then
-  email=1@local
+updateEmail=$1
+if [ -z "$updateEmail" ]; then
+  updateEmail=updated-1@local
 fi
 
-password=$2
-if [ -z "$password" ]; then
-  password=overwatch2023
+updateNickname=$2
+if [ -z "$updateNickname" ]; then
+  updateNickname=updated-nickname
+fi
+
+updateBirthdate=$3
+if [ -z "$updateBirthdate" ]; then
+  updateBirthdate=2000-01-01
 fi
 
 publicEndpoint=http://localhost:4533
 adminEndpoint=http://localhost:4534
 
-echo "------------- [create registration flow] -------------"
-responseCreateRegistrationFlow=$(curl -v -s -X GET \
-  -c .session_cookie \
-  -H "Accept: application/json" \
-  -H "Content-Type: application/json" \
-  $publicEndpoint/self-service/registration/browser)
-echo $responseCreateRegistrationFlow | jq 
-
-actionUrl=$(echo $responseCreateRegistrationFlow | jq -r '.ui.action')
-csrfToken=$(echo $responseCreateRegistrationFlow | jq -r '.ui.nodes[] | select(.attributes.name=="csrf_token") | .attributes.value') 
-
-echo "\n\n\n------------- [update registration flow] -------------"
-responseUpdateRegistrationFlow=$(curl -v -s -X POST \
+echo "------------- [create settings flow (method: profile)] -------------"
+responseCreateSettingsFlow=$(curl -v -s -X GET \
   -c .session_cookie -b .session_cookie \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{"csrf_token": "'$csrfToken'", "traits.email": "'$email'", "password": "'$password'", "method": "password"}' \
-  "$actionUrl") 
-echo $responseUpdateRegistrationFlow | jq
+  $publicEndpoint/self-service/settings/browser)
+echo $responseCreateSettingsFlow | jq 
+
+actionUrl=$(echo $responseCreateSettingsFlow | jq -r '.ui.action')
+csrfToken=$(echo $responseCreateSettingsFlow | jq -r '.ui.nodes[] | select(.attributes.name=="csrf_token") | .attributes.value') 
+
+echo "\n\n\n------------- [complete settings flow (method: profile)] -------------"
+responseCompleteSettingsFlow=$(curl -v -s -X POST \
+  -c .session_cookie -b .session_cookie \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{"csrf_token": "'$csrfToken'", "method": "profile", "traits": { "email": "'$updateEmail'", "nickname": "'$updateNickname'", "birthdate": "'$updateBirthdate'" }}' \
+  "$actionUrl")
+echo $responseCompleteSettingsFlow | jq 
 
 read -p "please input code emailed to you: " code
 
-verificationFlowId=$(echo $responseUpdateRegistrationFlow | jq -r -c '.continue_with[] | select(.action=="show_verification_ui") | .flow.id')
+verificationFlowId=$(echo $responseCompleteSettingsFlow | jq -r -c '.continue_with[] | select(.action=="show_verification_ui") | .flow.id')
 echo $verificationFlowId 
 
 echo "\n\n\n------------- [get verification flow] -------------"
@@ -59,5 +64,4 @@ responseUpdateVerificationFlow=$(curl -v -s -X POST \
   -d '{"csrf_token": "'$csrfToken'", "code": "'$code'", "method": "code"}' \
   "$publicEndpoint/self-service/verification?flow=$verificationFlowId")
 echo $responseUpdateVerificationFlow | jq 
-
 

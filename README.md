@@ -27,14 +27,16 @@ docker-compose.yaml で以下のコンテナが起動します。
 | browser | login | login_browser.sh |
 | browser | logout | logout_browser.sh |
 | browser | verification | verification_browser.sh |
-| browser | recover | recovery_browser.sh |
-| browser | settings | setting_browser.sh |
+| browser | recovery | recovery_browser.sh |
+| browser | settings (password) | settings_password_browser.sh |
+| browser | settings (profile) | settings_profile_browser.sh |
 | browser | check session | whoami_browser.sh |
 | api | registration | registration_api.sh |
 | api | login | login_api.sh |
 | api | logout | logout_api.sh |
 | api | verification | verification_api.sh |
-| api | settings | setting_api.sh |
+| api | settings (password) | settings_password_api.sh |
+| api | settings (profile) | settings_profile_api.sh |
 | api | check session | whoami_api.sh |
 
 **注意点**
@@ -112,12 +114,20 @@ docker compose up
 
 ## browser flow(SPA)実行例
 
+一旦、browser flowのみ記載します。
+
+API flowはまたいずれ追記したいと思います。
+
+### cookieの保管
+curlによるブラウザの操作を再現しており、cookieを`.session_cookie`ファイルに保管しています。
+
 ### ユーザー登録
 以下が実行されます。
 1. Registration flow初期化API
 2. Registration flow送信API(method: password)
 3. 2.で実行されたVerification flowによるメールアドレス検証メール確認と検証コード入力
-4. Verification flow(mothod: code)送信API
+4. Verification flow取得API
+5. Verification flow(mothod: code)送信API
 
 #### コマンド実行手順
 ```
@@ -157,11 +167,11 @@ uiで返却された項目は、本来はUIのレンダリングに使用しま�
 
 **フォームレンダリング例**
 ```html
-<form action="http://localhost:4533/self-service/registration?flow=65bcf3af-5b7d-4daa-a556-6a2443b8d52d" method="POST">
+<form action="http://localhost:4533/self-service/registration?flow=63ef44ef-1c95-4792-9bf5-0fd0b3def246" method="POST">
   <input
     name="csrf_token"
     type="hidden"
-    value="esIfcdIQhbArLsvpsVir0pOiXWdc6FGKyZLg/S7cKN+83orzcSTk5Z7NMc6GeUUxO8tdaQocu7sYorTcRunAVQ=="
+    value="6SjBGe5CvyelZfs9lbscfPsqvfWDWUxAm7mrZwOmGv75eeUJ8v3VZbpIH16mrJRjJzl42+qIMxxidMpuoxnc3g=="
   />
   <fieldset>
     <label>
@@ -195,13 +205,13 @@ uiで返却された項目は、本来はUIのレンダリングに使用しま�
 **レスポンス例**
 ```json
 {
-  "id": "65bcf3af-5b7d-4daa-a556-6a2443b8d52d",
+  "id": "63ef44ef-1c95-4792-9bf5-0fd0b3def246",
   "type": "browser",
-  "expires_at": "2024-01-31T04:53:49.281479005Z",
-  "issued_at": "2024-01-31T03:53:49.281479005Z",
+  "expires_at": "2024-01-31T10:47:47.927093211Z",
+  "issued_at": "2024-01-31T09:47:47.927093211Z",
   "request_url": "http://localhost:4533/self-service/registration/browser",
   "ui": {
-    "action": "http://localhost:4533/self-service/registration?flow=65bcf3af-5b7d-4daa-a556-6a2443b8d52d",
+    "action": "http://localhost:4533/self-service/registration?flow=63ef44ef-1c95-4792-9bf5-0fd0b3def246",
     "method": "POST",
     "nodes": [
       {
@@ -210,7 +220,7 @@ uiで返却された項目は、本来はUIのレンダリングに使用しま�
         "attributes": {
           "name": "csrf_token",
           "type": "hidden",
-          "value": "esIfcdIQhbArLsvpsVir0pOiXWdc6FGKyZLg/S7cKN+83orzcSTk5Z7NMc6GeUUxO8tdaQocu7sYorTcRunAVQ==",
+          "value": "6SjBGe5CvyelZfs9lbscfPsqvfWDWUxAm7mrZwOmGv75eeUJ8v3VZbpIH16mrJRjJzl42+qIMxxidMpuoxnc3g==",
           "required": true,
           "disabled": false,
           "node_type": "input"
@@ -349,101 +359,101 @@ Registration flowからVerification flowへ切り替わるため、次のflowを
 ```json
 {
   "session": {
-    "id": "f5fc03b7-f923-4b80-a802-2847fd4c1796",
+    "id": "11e5917c-9ddd-4139-8e82-60d9ea3a6b06",
     "active": true,
-    "expires_at": "2024-02-01T03:53:49.79546688Z",
-    "authenticated_at": "2024-01-31T03:53:49.800609505Z",
+    "expires_at": "2024-02-01T09:47:48.424595294Z",
+    "authenticated_at": "2024-01-31T09:47:48.431011544Z",
     "authenticator_assurance_level": "aal1",
     "authentication_methods": [
       {
         "method": "password",
         "aal": "aal1",
-        "completed_at": "2024-01-31T03:53:49.79546663Z"
+        "completed_at": "2024-01-31T09:47:48.424594836Z"
       }
     ],
-    "issued_at": "2024-01-31T03:53:49.79546688Z",
+    "issued_at": "2024-01-31T09:47:48.424595294Z",
     "identity": {
-      "id": "793126a9-3c8b-43ec-89d0-e48395235131",
+      "id": "584cd5aa-fe7a-4b62-adfb-8452e4dd33bc",
       "schema_id": "user_v1",
       "schema_url": "http://localhost:4533/schemas/dXNlcl92MQ",
       "state": "active",
-      "state_changed_at": "2024-01-31T03:53:49.789625713Z",
+      "state_changed_at": "2024-01-31T09:47:48.418015253Z",
       "traits": {
         "email": "1@local"
       },
       "verifiable_addresses": [
         {
-          "id": "a7d3f207-0a8d-47af-b0fb-576806a1bcde",
+          "id": "a8700929-bedf-4d90-a981-dbdfc01ff75f",
           "value": "1@local",
           "verified": false,
           "via": "email",
           "status": "sent",
-          "created_at": "2024-01-31T03:53:49.7915Z",
-          "updated_at": "2024-01-31T03:53:49.7915Z"
+          "created_at": "2024-01-31T09:47:48.420204Z",
+          "updated_at": "2024-01-31T09:47:48.420204Z"
         }
       ],
       "recovery_addresses": [
         {
-          "id": "694551fc-4074-4b92-b8e2-8cfe0a67c2e6",
+          "id": "02924cde-27fb-4b32-9ec5-e025421d8312",
           "value": "1@local",
           "via": "email",
-          "created_at": "2024-01-31T03:53:49.792294Z",
-          "updated_at": "2024-01-31T03:53:49.792294Z"
+          "created_at": "2024-01-31T09:47:48.421036Z",
+          "updated_at": "2024-01-31T09:47:48.421036Z"
         }
       ],
       "metadata_public": null,
-      "created_at": "2024-01-31T03:53:49.790597Z",
-      "updated_at": "2024-01-31T03:53:49.790597Z"
+      "created_at": "2024-01-31T09:47:48.419256Z",
+      "updated_at": "2024-01-31T09:47:48.419256Z"
     },
     "devices": [
       {
-        "id": "27a7e329-858b-4ed0-bb81-69506551f53f",
-        "ip_address": "192.168.65.1:38530",
+        "id": "bb51ec7c-79e3-4c02-808b-758f62c1275c",
+        "ip_address": "192.168.65.1:39001",
         "user_agent": "curl/7.87.0",
         "location": ""
       }
     ]
   },
   "identity": {
-    "id": "793126a9-3c8b-43ec-89d0-e48395235131",
+    "id": "584cd5aa-fe7a-4b62-adfb-8452e4dd33bc",
     "schema_id": "user_v1",
     "schema_url": "http://localhost:4533/schemas/dXNlcl92MQ",
     "state": "active",
-    "state_changed_at": "2024-01-31T03:53:49.789625713Z",
+    "state_changed_at": "2024-01-31T09:47:48.418015253Z",
     "traits": {
       "email": "1@local"
     },
     "verifiable_addresses": [
       {
-        "id": "a7d3f207-0a8d-47af-b0fb-576806a1bcde",
+        "id": "a8700929-bedf-4d90-a981-dbdfc01ff75f",
         "value": "1@local",
         "verified": false,
         "via": "email",
         "status": "sent",
-        "created_at": "2024-01-31T03:53:49.7915Z",
-        "updated_at": "2024-01-31T03:53:49.7915Z"
+        "created_at": "2024-01-31T09:47:48.420204Z",
+        "updated_at": "2024-01-31T09:47:48.420204Z"
       }
     ],
     "recovery_addresses": [
       {
-        "id": "694551fc-4074-4b92-b8e2-8cfe0a67c2e6",
+        "id": "02924cde-27fb-4b32-9ec5-e025421d8312",
         "value": "1@local",
         "via": "email",
-        "created_at": "2024-01-31T03:53:49.792294Z",
-        "updated_at": "2024-01-31T03:53:49.792294Z"
+        "created_at": "2024-01-31T09:47:48.421036Z",
+        "updated_at": "2024-01-31T09:47:48.421036Z"
       }
     ],
     "metadata_public": null,
-    "created_at": "2024-01-31T03:53:49.790597Z",
-    "updated_at": "2024-01-31T03:53:49.790597Z"
+    "created_at": "2024-01-31T09:47:48.419256Z",
+    "updated_at": "2024-01-31T09:47:48.419256Z"
   },
   "continue_with": [
     {
       "action": "show_verification_ui",
       "flow": {
-        "id": "af77553e-ae12-43b9-aaaa-7c5c167eb8a6",
+        "id": "f13fa3be-b40b-4ed7-9bd8-57cf641785d5",
         "verifiable_address": "1@local",
-        "url": "http://localhost:8000/auth/verification?flow=af77553e-ae12-43b9-aaaa-7c5c167eb8a6"
+        "url": "http://localhost:8000/auth/verification?flow=f13fa3be-b40b-4ed7-9bd8-57cf641785d5"
       }
     }
   ]
@@ -466,7 +476,110 @@ Hi, please verify your account by entering the following code: 312996 or clickin
 please input code emailed to you:
 ```
 
-#### 4. Verification flow(mothod: code)送信API
+#### 4. Verification flow取得API
+endpoint: `GET {{ kratos public endpoint }}/self-service/verification/flows`
+
+[APIドキュメント](https://www.ory.sh/docs/kratos/reference/api#tag/frontend/operation/getVerificationFlow)
+
+改めてVerification flowを取得しています。
+
+ここで取得したcsrf_tokenが6. Settings flow(mothod: password)送信APIのリクエストボディに必要となります。
+
+[Registration flowと同様に](https://github.com/YoshinoriSatoh/kratos_selfservice_example?tab=readme-ov-file#1-registration-flow%E3%81%AE%E5%88%9D%E6%9C%9F%E5%8C%96api)、uiの内容に従ってUIをレンダリングします。
+
+**レスポンス例**
+```json
+{
+  "id": "f13fa3be-b40b-4ed7-9bd8-57cf641785d5",
+  "type": "browser",
+  "expires_at": "2024-01-31T10:47:48.426066Z",
+  "issued_at": "2024-01-31T09:47:48.426066Z",
+  "request_url": "http://localhost:4533/self-service/registration/browser?return_to=",
+  "active": "code",
+  "ui": {
+    "action": "http://localhost:4533/self-service/verification?flow=f13fa3be-b40b-4ed7-9bd8-57cf641785d5",
+    "method": "POST",
+    "nodes": [
+      {
+        "type": "input",
+        "group": "code",
+        "attributes": {
+          "name": "code",
+          "type": "text",
+          "required": true,
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {
+          "label": {
+            "id": 1070011,
+            "text": "Verification code",
+            "type": "info"
+          }
+        }
+      },
+      {
+        "type": "input",
+        "group": "code",
+        "attributes": {
+          "name": "method",
+          "type": "hidden",
+          "value": "code",
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {}
+      },
+      {
+        "type": "input",
+        "group": "code",
+        "attributes": {
+          "name": "method",
+          "type": "submit",
+          "value": "code",
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {
+          "label": {
+            "id": 1070005,
+            "text": "Submit",
+            "type": "info"
+          }
+        }
+      },
+      {
+        "type": "input",
+        "group": "default",
+        "attributes": {
+          "name": "csrf_token",
+          "type": "hidden",
+          "value": "MVGaeJEn5vJDOVPLDY1lxTs+sdPTIKDnqMKZ04jeL01YHlHywiYDPH1DmGUFTHVV2rJjzDu333F9z0m9BCXPWg==",
+          "required": true,
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {}
+      }
+    ],
+    "messages": [
+      {
+        "id": 1080003,
+        "text": "An email containing a verification code has been sent to the email address you provided. If you have not received an email, check the spelling of the address and make sure to use the address you registered with.",
+        "type": "info",
+        "context": {}
+      }
+    ]
+  },
+  "state": "sent_email"
+}
+```
+
+#### 5. Verification flow(mothod: code)送信API
 
 endpoint: `POST {{ kratos public endpoint }}/self-service/verification`
 
@@ -483,6 +596,67 @@ selfservice:
       after:
         hooks:
           - hook: require_verified_address
+```
+
+```json
+{
+  "id": "f13fa3be-b40b-4ed7-9bd8-57cf641785d5",
+  "type": "browser",
+  "expires_at": "2024-01-31T10:47:48.426066Z",
+  "issued_at": "2024-01-31T09:47:48.426066Z",
+  "request_url": "http://localhost:4533/self-service/registration/browser?return_to=",
+  "active": "code",
+  "ui": {
+    "action": "http://localhost:8000/auth",
+    "method": "GET",
+    "nodes": [
+      {
+        "type": "input",
+        "group": "default",
+        "attributes": {
+          "name": "csrf_token",
+          "type": "hidden",
+          "value": "oDv2URL+6ebh+F1R/iNg+hnPMg4XOGU1jPsM7i7uq9rJdD3bQf8MKN+Clv/24nBq+EPgEf+vGqNZ9tyAohVLzQ==",
+          "required": true,
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {}
+      },
+      {
+        "type": "a",
+        "group": "code",
+        "attributes": {
+          "href": "http://localhost:8000/auth",
+          "title": {
+            "id": 1070009,
+            "text": "Continue",
+            "type": "info"
+          },
+          "id": "continue",
+          "node_type": "a"
+        },
+        "messages": [],
+        "meta": {
+          "label": {
+            "id": 1070009,
+            "text": "Continue",
+            "type": "info"
+          }
+        }
+      }
+    ],
+    "messages": [
+      {
+        "id": 1080002,
+        "text": "You successfully verified your email address.",
+        "type": "success"
+      }
+    ]
+  },
+  "state": "passed_challenge"
+}
 ```
 
 ### ログイン
@@ -826,7 +1000,7 @@ endpoint: `GET {{ kratos public endpoint }}/self-service/recovery/browser`
 
 Recovery flowの初期化を行います。
 
-uiで返却された項目のレンダリングに関しては、Registration flowと同様です。
+[Registration flowと同様に](https://github.com/YoshinoriSatoh/kratos_selfservice_example?tab=readme-ov-file#1-registration-flow%E3%81%AE%E5%88%9D%E6%9C%9F%E5%8C%96api)、uiの内容に従ってUIをレンダリングします。
 
 **レスポンス例**
 ```json
@@ -1074,6 +1248,8 @@ endpoint: `GET {{ kratos public endpoint }}/self-service/settings/flows`
 改めてSettings flowを取得しています。
 
 ここで取得したcsrf_tokenが6. Settings flow(mothod: password)送信APIのリクエストボディに必要となります。
+
+[Registration flowと同様に](https://github.com/YoshinoriSatoh/kratos_selfservice_example?tab=readme-ov-file#1-registration-flow%E3%81%AE%E5%88%9D%E6%9C%9F%E5%8C%96api)、uiの内容に従ってUIをレンダリングします。
 
 **レスポンス例**
 ```json
@@ -1462,3 +1638,862 @@ Settings flowを実行します。
   "state": "success"
 }
 ```
+
+### セッティング (パスワード更新)
+以下が実行されます。
+1. Settings flow初期化API
+2. Settings flow送信API (method: password)
+
+ここでは、Settings flowの中でも、パスワード更新を実施します。
+
+Settings flowでは、パスワードの他にも、ユーザー情報の更新、その他OIDC等の設定更新が可能です。
+
+#### 前提条件
+予めログインされたcookieが必要です。
+
+(`.session_cookie`に保存されています。)
+
+[こちらを参照して](https://github.com/YoshinoriSatoh/kratos_selfservice_example?tab=readme-ov-file#%E3%83%AD%E3%82%B0%E3%82%A4%E3%83%B3)ログインしてください。
+
+#### コマンド実行手順
+```
+./scripts/settings_password_browser.sh <update-password>
+```
+
+#### 実行例
+```
+./scripts/settings_password_browser.sh updated-overwatch2024
+```
+
+#### 1. Settings flow初期化API
+
+endpoint: `GET {{ kratos public endpoint }}/self-service/settings/browser`
+
+[APIドキュメント](https://www.ory.sh/docs/kratos/reference/api#tag/frontend/operation/createBrowserSettingsFlow)
+
+Settings flowの初期化を行います。
+
+[Registration flowと同様に](https://github.com/YoshinoriSatoh/kratos_selfservice_example?tab=readme-ov-file#1-registration-flow%E3%81%AE%E5%88%9D%E6%9C%9F%E5%8C%96api)、uiの内容に従ってUIをレンダリングします。
+
+**レスポンス例**
+```json
+{
+  "id": "9f9803c5-95d9-46b6-93ca-7701ee187812",
+  "type": "browser",
+  "expires_at": "2024-01-31T09:54:11.474883208Z",
+  "issued_at": "2024-01-31T08:54:11.474883208Z",
+  "request_url": "http://localhost:4533/self-service/settings/browser",
+  "ui": {
+    "action": "http://localhost:4533/self-service/settings?flow=9f9803c5-95d9-46b6-93ca-7701ee187812",
+    "method": "POST",
+    "nodes": [
+      {
+        "type": "input",
+        "group": "default",
+        "attributes": {
+          "name": "csrf_token",
+          "type": "hidden",
+          "value": "a9uFV7aKpnmAJQQk7RJ7THQepfD+fby1Yh2LjYReGXel3r5mDd3+UNboi3LiMoQ6bS/d8gVL/c6e4eSJ4uwjdg==",
+          "required": true,
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {}
+      },
+      {
+        "type": "input",
+        "group": "profile",
+        "attributes": {
+          "name": "traits.email",
+          "type": "email",
+          "value": "1@local",
+          "required": true,
+          "autocomplete": "email",
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {
+          "label": {
+            "id": 1070002,
+            "text": "E-Mail",
+            "type": "info"
+          }
+        }
+      },
+      {
+        "type": "input",
+        "group": "profile",
+        "attributes": {
+          "name": "traits.nickname",
+          "type": "text",
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {
+          "label": {
+            "id": 1070002,
+            "text": "nickname",
+            "type": "info"
+          }
+        }
+      },
+      {
+        "type": "input",
+        "group": "profile",
+        "attributes": {
+          "name": "traits.birthdate",
+          "type": "text",
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {
+          "label": {
+            "id": 1070002,
+            "text": "birthdate",
+            "type": "info"
+          }
+        }
+      },
+      {
+        "type": "input",
+        "group": "profile",
+        "attributes": {
+          "name": "method",
+          "type": "submit",
+          "value": "profile",
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {
+          "label": {
+            "id": 1070003,
+            "text": "Save",
+            "type": "info"
+          }
+        }
+      },
+      {
+        "type": "input",
+        "group": "password",
+        "attributes": {
+          "name": "password",
+          "type": "password",
+          "required": true,
+          "autocomplete": "new-password",
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {
+          "label": {
+            "id": 1070001,
+            "text": "Password",
+            "type": "info"
+          }
+        }
+      },
+      {
+        "type": "input",
+        "group": "password",
+        "attributes": {
+          "name": "method",
+          "type": "submit",
+          "value": "password",
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {
+          "label": {
+            "id": 1070003,
+            "text": "Save",
+            "type": "info"
+          }
+        }
+      }
+    ]
+  },
+  "identity": {
+    "id": "793126a9-3c8b-43ec-89d0-e48395235131",
+    "schema_id": "user_v1",
+    "schema_url": "http://localhost:4533/schemas/dXNlcl92MQ",
+    "state": "active",
+    "state_changed_at": "2024-01-31T03:53:49.789625Z",
+    "traits": {
+      "email": "1@local"
+    },
+    "verifiable_addresses": [
+      {
+        "id": "a7d3f207-0a8d-47af-b0fb-576806a1bcde",
+        "value": "1@local",
+        "verified": true,
+        "via": "email",
+        "status": "completed",
+        "verified_at": "2024-01-31T04:08:28.273878Z",
+        "created_at": "2024-01-31T03:53:49.7915Z",
+        "updated_at": "2024-01-31T03:53:49.7915Z"
+      }
+    ],
+    "recovery_addresses": [
+      {
+        "id": "694551fc-4074-4b92-b8e2-8cfe0a67c2e6",
+        "value": "1@local",
+        "via": "email",
+        "created_at": "2024-01-31T03:53:49.792294Z",
+        "updated_at": "2024-01-31T03:53:49.792294Z"
+      }
+    ],
+    "metadata_public": null,
+    "created_at": "2024-01-31T03:53:49.790597Z",
+    "updated_at": "2024-01-31T03:53:49.790597Z"
+  },
+  "state": "show_form"
+}
+```
+
+#### 2. Settings flow送信API (method: password)
+
+endpoint: `POST {{ kratos public endpoint }}/self-service/settings`
+
+[APIドキュメント](https://www.ory.sh/docs/kratos/reference/api#tag/frontend/operation/updateSettingsFlow)
+
+1.で初期化したSettings flowを実行します。
+
+ここでは、パスワードが更新されます。
+
+**レスポンス例**
+```json
+{
+  "id": "9f9803c5-95d9-46b6-93ca-7701ee187812",
+  "type": "browser",
+  "expires_at": "2024-01-31T09:54:11.474883Z",
+  "issued_at": "2024-01-31T08:54:11.474883Z",
+  "request_url": "http://localhost:4533/self-service/settings/browser",
+  "ui": {
+    "action": "http://localhost:4533/self-service/settings?flow=e54f2132-8c51-40db-9d9b-c52ded875083",
+    "method": "POST",
+    "nodes": [
+      {
+        "type": "input",
+        "group": "default",
+        "attributes": {
+          "name": "csrf_token",
+          "type": "hidden",
+          "value": "fXL+AFxv2mF5AlIzNKn5XlTPxBrz2qx8G9jU3zZMXWazd8Ux5ziCSC/P3WU7iQYoTf68GAjs7QfnJLvbUP5nZw==",
+          "required": true,
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {}
+      },
+      {
+        "type": "input",
+        "group": "profile",
+        "attributes": {
+          "name": "traits.email",
+          "type": "email",
+          "value": "1@local",
+          "required": true,
+          "autocomplete": "email",
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {
+          "label": {
+            "id": 1070002,
+            "text": "E-Mail",
+            "type": "info"
+          }
+        }
+      },
+      {
+        "type": "input",
+        "group": "profile",
+        "attributes": {
+          "name": "traits.nickname",
+          "type": "text",
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {
+          "label": {
+            "id": 1070002,
+            "text": "nickname",
+            "type": "info"
+          }
+        }
+      },
+      {
+        "type": "input",
+        "group": "profile",
+        "attributes": {
+          "name": "traits.birthdate",
+          "type": "text",
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {
+          "label": {
+            "id": 1070002,
+            "text": "birthdate",
+            "type": "info"
+          }
+        }
+      },
+      {
+        "type": "input",
+        "group": "profile",
+        "attributes": {
+          "name": "method",
+          "type": "submit",
+          "value": "profile",
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {
+          "label": {
+            "id": 1070003,
+            "text": "Save",
+            "type": "info"
+          }
+        }
+      },
+      {
+        "type": "input",
+        "group": "password",
+        "attributes": {
+          "name": "password",
+          "type": "password",
+          "required": true,
+          "autocomplete": "new-password",
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {
+          "label": {
+            "id": 1070001,
+            "text": "Password",
+            "type": "info"
+          }
+        }
+      },
+      {
+        "type": "input",
+        "group": "password",
+        "attributes": {
+          "name": "method",
+          "type": "submit",
+          "value": "password",
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {
+          "label": {
+            "id": 1070003,
+            "text": "Save",
+            "type": "info"
+          }
+        }
+      }
+    ],
+    "messages": [
+      {
+        "id": 1050001,
+        "text": "Your changes have been saved!",
+        "type": "success"
+      }
+    ]
+  },
+  "identity": {
+    "id": "793126a9-3c8b-43ec-89d0-e48395235131",
+    "schema_id": "user_v1",
+    "schema_url": "http://localhost:4533/schemas/dXNlcl92MQ",
+    "state": "active",
+    "state_changed_at": "2024-01-31T03:53:49.789625Z",
+    "traits": {
+      "email": "1@local"
+    },
+    "verifiable_addresses": [
+      {
+        "id": "a7d3f207-0a8d-47af-b0fb-576806a1bcde",
+        "value": "1@local",
+        "verified": true,
+        "via": "email",
+        "status": "completed",
+        "verified_at": "2024-01-31T04:08:28.273878Z",
+        "created_at": "2024-01-31T03:53:49.7915Z",
+        "updated_at": "2024-01-31T03:53:49.7915Z"
+      }
+    ],
+    "recovery_addresses": [
+      {
+        "id": "694551fc-4074-4b92-b8e2-8cfe0a67c2e6",
+        "value": "1@local",
+        "via": "email",
+        "created_at": "2024-01-31T03:53:49.792294Z",
+        "updated_at": "2024-01-31T03:53:49.792294Z"
+      }
+    ],
+    "metadata_public": null,
+    "created_at": "2024-01-31T03:53:49.790597Z",
+    "updated_at": "2024-01-31T03:53:49.790597Z"
+  },
+  "state": "success"
+}
+```
+
+### セッティング (プロファイル更新)
+以下が実行されます。
+1. Settings flow初期化API
+2. Settings flow送信API (method: profile)
+以下は`email`を更新した場合のみ実行されます。
+3. 2.で実行されたVerification flowによるメールアドレス検証メール確認と検証コード入力
+4. Verification flow取得API
+5. Verification flow(mothod: code)送信API
+
+ここでは、Settings flowの中でも、プロファイル更新を実施します。
+
+プロファイル更新では、Identity schemaで定義された属性の更新が可能です。
+
+`email`が`identifier`に指定されている項目が更新された場合（なおかつ、`verification: via: "email"`が設定されている場合）、メールアドレスは検証されていない状態となります。
+
+別途、メールアドレスのVerification flowを実施する必要があります。
+
+#### 前提条件
+予めログインされたcookieが必要です。
+
+(`.session_cookie`に保存されています。)
+
+[こちらを参照して](https://github.com/YoshinoriSatoh/kratos_selfservice_example?tab=readme-ov-file#%E3%83%AD%E3%82%B0%E3%82%A4%E3%83%B3)ログインしてください。
+
+#### コマンド実行手順
+```
+./scripts/settings_profile_browser.sh <<update-email> <update-nickname> <update-birthdate>>
+```
+
+#### 実行例
+```
+./scripts/settings_profile_browser.sh updated-1@local updated-nickname 2000-01-01
+```
+
+#### 1. Settings flow初期化API
+
+endpoint: `GET {{ kratos public endpoint }}/self-service/settings/browser`
+
+[APIドキュメント](https://www.ory.sh/docs/kratos/reference/api#tag/frontend/operation/createBrowserSettingsFlow)
+
+Settings flowの初期化を行います。
+
+[Registration flowと同様に](https://github.com/YoshinoriSatoh/kratos_selfservice_example?tab=readme-ov-file#1-registration-flow%E3%81%AE%E5%88%9D%E6%9C%9F%E5%8C%96api)、uiの内容に従ってUIをレンダリングします。
+
+**レスポンス例**
+```json
+{
+  "id": "38c9c3ee-45c8-4b98-9d8b-d4850f5e8408",
+  "type": "browser",
+  "expires_at": "2024-01-31T10:11:13.388073334Z",
+  "issued_at": "2024-01-31T09:11:13.388073334Z",
+  "request_url": "http://localhost:4533/self-service/settings/browser",
+  "ui": {
+    "action": "http://localhost:4533/self-service/settings?flow=38c9c3ee-45c8-4b98-9d8b-d4850f5e8408",
+    "method": "POST",
+    "nodes": [
+      {
+        "type": "input",
+        "group": "default",
+        "attributes": {
+          "name": "csrf_token",
+          "type": "hidden",
+          "value": "WwXwxKP3M6IwsMFbexhwOS2yVt3MsdQICVhAU4MJh/7TGDxXbkDoExqP+kdKAhuUDMoc2mTcK3eRn9P/kIAlPQ==",
+          "required": true,
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {}
+      },
+      {
+        "type": "input",
+        "group": "profile",
+        "attributes": {
+          "name": "traits.email",
+          "type": "email",
+          "value": "1@local",
+          "required": true,
+          "autocomplete": "email",
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {
+          "label": {
+            "id": 1070002,
+            "text": "E-Mail",
+            "type": "info"
+          }
+        }
+      },
+      {
+        "type": "input",
+        "group": "profile",
+        "attributes": {
+          "name": "traits.nickname",
+          "type": "text",
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {
+          "label": {
+            "id": 1070002,
+            "text": "nickname",
+            "type": "info"
+          }
+        }
+      },
+      {
+        "type": "input",
+        "group": "profile",
+        "attributes": {
+          "name": "traits.birthdate",
+          "type": "text",
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {
+          "label": {
+            "id": 1070002,
+            "text": "birthdate",
+            "type": "info"
+          }
+        }
+      },
+      {
+        "type": "input",
+        "group": "profile",
+        "attributes": {
+          "name": "method",
+          "type": "submit",
+          "value": "profile",
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {
+          "label": {
+            "id": 1070003,
+            "text": "Save",
+            "type": "info"
+          }
+        }
+      },
+      {
+        "type": "input",
+        "group": "password",
+        "attributes": {
+          "name": "password",
+          "type": "password",
+          "required": true,
+          "autocomplete": "new-password",
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {
+          "label": {
+            "id": 1070001,
+            "text": "Password",
+            "type": "info"
+          }
+        }
+      },
+      {
+        "type": "input",
+        "group": "password",
+        "attributes": {
+          "name": "method",
+          "type": "submit",
+          "value": "password",
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {
+          "label": {
+            "id": 1070003,
+            "text": "Save",
+            "type": "info"
+          }
+        }
+      }
+    ]
+  },
+  "identity": {
+    "id": "793126a9-3c8b-43ec-89d0-e48395235131",
+    "schema_id": "user_v1",
+    "schema_url": "http://localhost:4533/schemas/dXNlcl92MQ",
+    "state": "active",
+    "state_changed_at": "2024-01-31T03:53:49.789625Z",
+    "traits": {
+      "email": "1@local"
+    },
+    "verifiable_addresses": [
+      {
+        "id": "a7d3f207-0a8d-47af-b0fb-576806a1bcde",
+        "value": "1@local",
+        "verified": true,
+        "via": "email",
+        "status": "completed",
+        "verified_at": "2024-01-31T04:08:28.273878Z",
+        "created_at": "2024-01-31T03:53:49.7915Z",
+        "updated_at": "2024-01-31T03:53:49.7915Z"
+      }
+    ],
+    "recovery_addresses": [
+      {
+        "id": "694551fc-4074-4b92-b8e2-8cfe0a67c2e6",
+        "value": "1@local",
+        "via": "email",
+        "created_at": "2024-01-31T03:53:49.792294Z",
+        "updated_at": "2024-01-31T03:53:49.792294Z"
+      }
+    ],
+    "metadata_public": null,
+    "created_at": "2024-01-31T03:53:49.790597Z",
+    "updated_at": "2024-01-31T03:53:49.790597Z"
+  },
+  "state": "show_form"
+}
+```
+
+
+#### 2. Settings flow送信API (method: profile)
+
+endpoint: `POST {{ kratos public endpoint }}/self-service/settings`
+
+[APIドキュメント](https://www.ory.sh/docs/kratos/reference/api#tag/frontend/operation/updateSettingsFlow)
+
+1.で初期化したSettings flowを実行します。
+
+ここでは、プロファイルが更新されます。
+
+emailを更新した場合（変更があった場合）のみ、レスポンスに`continue_with`が含まれます。
+
+`continue_with`が含まれていた場合は、[Registration flowからVerification flowへの切り替え](https://github.com/YoshinoriSatoh/kratos_selfservice_example?tab=readme-ov-file#2-registration-flow%E3%81%AE%E5%AE%9F%E8%A1%8Capimethod-password)と同様の手順で、Verification flowを実施する必要があります。
+
+**レスポンス例**
+```json
+{
+  "id": "38c9c3ee-45c8-4b98-9d8b-d4850f5e8408",
+  "type": "browser",
+  "expires_at": "2024-01-31T10:11:13.388073Z",
+  "issued_at": "2024-01-31T09:11:13.388073Z",
+  "request_url": "http://localhost:4533/self-service/settings/browser",
+  "ui": {
+    "action": "http://localhost:4533/self-service/settings?flow=fb01878b-2597-4116-ad7d-2d776dcb3cae",
+    "method": "POST",
+    "nodes": [
+      {
+        "type": "input",
+        "group": "default",
+        "attributes": {
+          "name": "csrf_token",
+          "type": "hidden",
+          "value": "5n6cpiLdE4bGH6YDQDq/sZ6VTNFS8U+kAPTk4w52CkxuY1A172rIN+wgnR9xINQcv+0G1vqcsNuYM3dPHf+ojw==",
+          "required": true,
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {}
+      },
+      {
+        "type": "input",
+        "group": "profile",
+        "attributes": {
+          "name": "traits.email",
+          "type": "email",
+          "value": "updated-1@local",
+          "required": true,
+          "autocomplete": "email",
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {
+          "label": {
+            "id": 1070002,
+            "text": "E-Mail",
+            "type": "info"
+          }
+        }
+      },
+      {
+        "type": "input",
+        "group": "profile",
+        "attributes": {
+          "name": "traits.nickname",
+          "type": "text",
+          "value": "updated-nickname",
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {
+          "label": {
+            "id": 1070002,
+            "text": "nickname",
+            "type": "info"
+          }
+        }
+      },
+      {
+        "type": "input",
+        "group": "profile",
+        "attributes": {
+          "name": "traits.birthdate",
+          "type": "text",
+          "value": "2000-01-01",
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {
+          "label": {
+            "id": 1070002,
+            "text": "birthdate",
+            "type": "info"
+          }
+        }
+      },
+      {
+        "type": "input",
+        "group": "profile",
+        "attributes": {
+          "name": "method",
+          "type": "submit",
+          "value": "profile",
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {
+          "label": {
+            "id": 1070003,
+            "text": "Save",
+            "type": "info"
+          }
+        }
+      },
+      {
+        "type": "input",
+        "group": "password",
+        "attributes": {
+          "name": "password",
+          "type": "password",
+          "required": true,
+          "autocomplete": "new-password",
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {
+          "label": {
+            "id": 1070001,
+            "text": "Password",
+            "type": "info"
+          }
+        }
+      },
+      {
+        "type": "input",
+        "group": "password",
+        "attributes": {
+          "name": "method",
+          "type": "submit",
+          "value": "password",
+          "disabled": false,
+          "node_type": "input"
+        },
+        "messages": [],
+        "meta": {
+          "label": {
+            "id": 1070003,
+            "text": "Save",
+            "type": "info"
+          }
+        }
+      }
+    ],
+    "messages": [
+      {
+        "id": 1050001,
+        "text": "Your changes have been saved!",
+        "type": "success"
+      }
+    ]
+  },
+  "identity": {
+    "id": "793126a9-3c8b-43ec-89d0-e48395235131",
+    "schema_id": "user_v1",
+    "schema_url": "http://localhost:4533/schemas/dXNlcl92MQ",
+    "state": "active",
+    "traits": {
+      "email": "updated-1@local",
+      "nickname": "updated-nickname",
+      "birthdate": "2000-01-01"
+    },
+    "verifiable_addresses": [
+      {
+        "id": "e8fc5c26-f422-4d85-8dd7-20753969b142",
+        "value": "updated-1@local",
+        "verified": false,
+        "via": "email",
+        "status": "sent",
+        "created_at": "2024-01-31T09:11:13.502702Z",
+        "updated_at": "2024-01-31T09:11:13.502702Z"
+      }
+    ],
+    "recovery_addresses": [
+      {
+        "id": "f95f28ca-e1e3-4887-b1a6-02c05c6a8b2c",
+        "value": "updated-1@local",
+        "via": "email",
+        "created_at": "2024-01-31T09:11:13.501268Z",
+        "updated_at": "2024-01-31T09:11:13.501268Z"
+      }
+    ],
+    "metadata_public": null,
+    "created_at": "2024-01-31T03:53:49.790597Z",
+    "updated_at": "2024-01-31T03:53:49.790597Z"
+  },
+  "state": "success",
+  "continue_with": [
+    {
+      "action": "show_verification_ui",
+      "flow": {
+        "id": "bf045695-1d9d-4f19-ab8c-f4ddf0dd388d",
+        "verifiable_address": "updated-1@local",
+        "url": "http://localhost:8000/auth/verification?flow=bf045695-1d9d-4f19-ab8c-f4ddf0dd388d"
+      }
+    }
+  ]
+}
+```
+
+#### 3.4.5.(emailを更新した場合のみ) Verification flow
+
+[Registration flow後のVerificaiton flowと同様です](https://github.com/YoshinoriSatoh/kratos_selfservice_example?tab=readme-ov-file#3-2%E3%81%A7%E5%AE%9F%E8%A1%8C%E3%81%95%E3%82%8C%E3%81%9Fverification-flow%E3%81%AB%E3%82%88%E3%82%8B%E3%83%A1%E3%83%BC%E3%83%AB%E3%82%A2%E3%83%89%E3%83%AC%E3%82%B9%E6%A4%9C%E8%A8%BC%E3%83%A1%E3%83%BC%E3%83%AB%E7%A2%BA%E8%AA%8D%E3%81%A8%E6%A4%9C%E8%A8%BC%E3%82%B3%E3%83%BC%E3%83%89%E5%85%A5%E5%8A%9B)
