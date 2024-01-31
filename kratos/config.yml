@@ -25,19 +25,8 @@ selfservice:
         haveibeenpwned_enabled: true
         min_password_length: 8
         identifier_similarity_check_enabled: true
-    code:
-      enabled: true
-      # passwordless_enabled: true
     profile:
       enabled: true
-    # webauthn:
-    #   config:
-    #     passwordless: false
-    #     rp:
-    #       display_name: SAMPLE_NAME
-    #       id: localhsot
-    #       origin: http://localhost:8000
-    #   enabled: true
   flows:
     registration:
       enabled: true
@@ -78,10 +67,10 @@ session:
   whoami:
     required_aal: highest_available
 
-cookies:
-  same_site: Lax
-  path: /
-  domain: localhost
+# cookies:
+#   same_site: Lax
+#   path: /
+#   domain: localhost
 
 secrets:
   cookie:

@@ -13,11 +13,6 @@ if [ -z "$password" ]; then
   password=overwatch2023
 fi
 
-role=$3
-if [ -z "$role" ]; then
-  role=admin
-fi
-
 publicEndpoint=http://localhost:4533
 adminEndpoint=http://localhost:4534
 
