@@ -7,7 +7,7 @@ ory kratosの使用サンプルです。
 [ory kratos Github](https://github.com/ory/kratos)
 
 以下のサンプルを用意しています。
-* [selfservice curl example](https://github.com/YoshinoriSatoh/kratos_example/README-SELFSERVICE-CURL.md)
+* [selfservice curl example](https://github.com/YoshinoriSatoh/kratos_example/blob/main/README-SELFSERVICE-CURL.md)
 
 ## 構成
 docker-compose.yaml で以下のコンテナが起動します。
@@ -30,8 +30,8 @@ docker compose up
 
 | 項目 | URL |
 | ---- | ---- |
-| kratos public endpoint | http://localhost:4533 |
-| kratos admin endpoint | http://localhost:4534 |
+| kratos public endpoint | http://localhost:4433 |
+| kratos admin endpoint | http://localhost:4434 |
 | kratos DB | postgres://kratos:secret@localhost:5432/kratos |
 | mailslurper console | http://localhost:4436 |
 
@@ -40,4 +40,4 @@ docker compose up
 
 [kartosのSelfService flow](https://www.ory.sh/docs/kratos/self-service)をcurlで再現したサンプルです。
 
-[selfservice curl example](https://github.com/YoshinoriSatoh/kratos_example/README-SELFSERVICE-CURL.md)
+[selfservice curl example](https://github.com/YoshinoriSatoh/kratos_example/blob/main/README-SELFSERVICE-CURL.md)

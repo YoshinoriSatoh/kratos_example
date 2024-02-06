@@ -1,0 +1,13 @@
+{{define "verification/index.html"}}
+{{template "layout/_header.html" .}}
+
+<h2>{{.Title}}</h2>
+<p>
+  <div>Please enter the verification code that was sent to your email address. </div>
+  <a href="http://localhost:4436" target="_blank">Mailslurper</a>
+</p>
+    
+{{template "verification/_form.html" .}}
+
+{{template "layout/_footer.html" .}}
+{{end}}

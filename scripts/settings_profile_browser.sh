@@ -18,8 +18,8 @@ if [ -z "$updateBirthdate" ]; then
   updateBirthdate=2000-01-01
 fi
 
-publicEndpoint=http://localhost:4533
-adminEndpoint=http://localhost:4534
+publicEndpoint=http://localhost:4433
+adminEndpoint=http://localhost:4434
 
 echo "------------- [create settings flow (method: profile)] -------------"
 responseCreateSettingsFlow=$(curl -v -s -X GET \

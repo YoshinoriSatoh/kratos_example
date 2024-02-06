@@ -1,3 +1,4 @@
+tmp/
 .tmp/
 .session_cookie*
 .session_token*

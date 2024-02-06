@@ -13,8 +13,8 @@ if [ -z "$password" ]; then
   password=overwatch2023
 fi
 
-publicEndpoint=http://localhost:4533
-adminEndpoint=http://localhost:4534
+publicEndpoint=http://localhost:4433
+adminEndpoint=http://localhost:4434
 
 echo "------------- [create login flow] -------------"
 responseCreateLoginFlow=$(curl -v -s -X GET \

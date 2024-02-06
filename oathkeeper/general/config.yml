@@ -1,0 +1,45 @@
+version: v0.40.0
+
+serve:
+  api:
+    port: 4456
+
+access_rules:
+  matching_strategy: regexp
+
+authenticators:
+  noop:
+    enabled: true
+  cookie_session:
+    enabled: true
+    config:
+      check_session_url: http://kratos-general:4433/sessions/whoami
+      preserve_path: true
+      extra_from: "@this"
+      subject_from: "identity.id"
+      only:
+        - kratos_general_session
+
+authorizers:
+  allow:
+    enabled: true
+  deny:
+    enabled: true
+
+mutators:
+  noop:
+    enabled: true
+  id_token:
+    enabled: true
+    config:
+      issuer_url: http://oathkeeper-general:4456/
+      jwks_url: file://./id_token.jwks.json
+      claims: |
+        {
+          "session": {{ .Extra | toJson }}
+        }
+
+log:
+  level: trace
+  format: text
+  leak_sensitive_values: false

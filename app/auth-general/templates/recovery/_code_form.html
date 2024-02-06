@@ -1,0 +1,26 @@
+{{define "recovery/_code_form.html"}}
+<form 
+  id="recovery-form"
+  hx-post="/recovery/complete?flow={{.RecoveryFlowID}}" 
+  hx-swap="outerHTML" 
+  hx-target="this"
+>
+  <input
+    name="csrf_token"
+    type="hidden"
+    value="{{.CsrfToken}}"
+  />
+  <div>
+    <label>Recovery</label>
+    <input 
+      id="code"
+      name="code" 
+      required
+    >
+  </div>
+  <button>Send recovery code</button>
+  {{ if ne .ErrorMessage "" }}
+    <div>{{.ErrorMessage}}</div>
+  {{end}}
+</form> 
+{{end}}

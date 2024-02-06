@@ -1,29 +1,78 @@
 version: '3.8'
 services:
-  kratos:
+  # traefik:
+  #   image: traefik:v2.9
+  #   labels:
+  #      - traefik.http.middlewares.oathkeeper-general.forwardauth.address=http://oathkeeper-general:4456/decisions
+  #      - traefik.http.middlewares.oathkeeper-general.forwardauth.authResponseHeaders=X-Id-Token,Authorization
+  #      - traefik.http.middlewares.cors-general.headers.accesscontrolallowheaders=Content-Type,X-CSRF-TOKEN
+  #      - traefik.http.middlewares.cors-general.headers.accesscontrolallowmethods=OPTIONS,GET,POST,PUT,DELETE,PATCH
+  #      - traefik.http.middlewares.cors-general.headers.accesscontrolalloworiginlist=http://localhost:3000
+  #      - traefik.http.middlewares.cors-general.headers.accesscontrolallowcredentials=true
+  #      - traefik.http.middlewares.cors-general.headers.addvaryheader=true
+  #   environment:
+  #     TRAEFIK_ENTRYPOINTS_GENERAL: true
+  #     TRAEFIK_ENTRYPOINTS_GENERAL_ADDRESS: ":8100" 
+  #     TRAEFIK_PING: true
+  #     TRAEFIK_PROVIDERS_DOCKER: true
+  #     TRAEFIK_API_INSECURE: true
+  #     TRAEFIK_API_DEBUG: true
+  #     # TRAEFIK_ACCESSLOG: true
+  #   ports:
+  #     - "8100:8100"
+  #     - "8080:8080"
+  #   volumes:
+  #     - type: bind
+  #       source: /var/run/docker.sock
+  #       target: /var/run/docker.sock
+
+  # oathkeeper-general:
+  #   image: oryd/oathkeeper:v0.40
+  #   depends_on:
+  #     - kratos-general
+  #   ports:
+  #     - 4456:4456
+  #   command:
+  #     serve proxy -c "/etc/config/oathkeeper/config.yml"
+  #   restart: on-failure
+  #   volumes:
+  #     - type: bind
+  #       source: ./oathkeeper/general
+  #       target: /etc/config/oathkeeper
+
+  kratos-general:
     depends_on:
-      - kratos-migrate
+      - kratos-general-migrate
     image: oryd/kratos:v1.0.0
+    # labels:
+    #   - traefik.http.middlewares.kratos-general.stripprefix.prefixes=/auth
+    #   - traefik.http.routers.kratos-general.entrypoints=general
+    #   - traefik.http.routers.kratos-general.rule=PathPrefix(`/auth`)
+    #   - traefik.http.routers.kratos-general.middlewares=cors-general,kratos-general
+    #   - traefik.http.services.kratos-general.loadbalancer.server.port=4433
+    #   - traefik.http.services.kratos-general.loadbalancer.healthcheck.path=/health/alive
+    #   - traefik.http.services.kratos-general.loadbalancer.healthcheck.port=4434
+    #   - traefik.http.services.kratos-general.loadbalancer.healthcheck.followredirects=false
     ports:
-      - 4533:4533 # public
-      - 4534:4534 # admin
+      - 4433:4433 # public
+      - 4434:4434 # admin
     command: serve -c /etc/config/kratos/config.yml --dev --watch-courier
     volumes:
       - type: bind
-        source: ./kratos
+        source: ./kratos/general
         target: /etc/config/kratos
-        
-  kratos-migrate:
+
+  kratos-general-migrate:
     depends_on:
-      - db-kratos
+      - db-kratos-general
     image: oryd/kratos:v1.0.0
     command: -c /etc/config/kratos/config.yml migrate sql -e --yes
     volumes:
       - type: bind
-        source: ./kratos
+        source: ./kratos/general
         target: /etc/config/kratos
-      
-  db-kratos:
+        
+  db-kratos-general:
     image: postgres:16
     ports:
       - 5432:5432
@@ -32,7 +81,11 @@ services:
       POSTGRES_PASSWORD: secret
       POSTGRES_DB: kratos
     volumes:
-      - db_kratos_data:/var/lib/postgresql/data
+      - type: volume
+        source: db_kratos_general_data
+        target: /var/lib/postgresql/data
+        volume:
+          nocopy: true
 
   mailslurper:
     image: oryd/mailslurper:latest-smtps
@@ -41,5 +94,38 @@ services:
       - 4437:4437
       - 1025:1025
 
+  app-auth-general:
+    build:
+      context: ./app/auth-general
+      target: development
+    # labels:
+    #   - traefik.http.middlewares.app-sample.stripprefix.prefixes=/app/sample
+    #   - traefik.http.routers.app-sample.entrypoints=general
+    #   - traefik.http.routers.app-sample.rule=PathPrefix(`/app/sample`)
+    #   - traefik.http.routers.app-sample.middlewares=cors-general,app-sample
+    #   - traefik.http.services.app-sample.loadbalancer.server.port=3000
+    #   - traefik.http.services.app-sample.loadbalancer.healthcheck.path=/public/health
+    #   - traefik.http.services.app-sample.loadbalancer.healthcheck.port=3000
+    #   - traefik.http.services.app-sample.loadbalancer.healthcheck.followredirects=false
+    #   - traefik.http.services.app-sample.loadbalancer.healthcheck.interval=1s
+    command: air
+    ports:
+      - 3000:3000
+    working_dir: /root/app
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+    volumes:
+      - type: bind
+        source: ./app/auth-general
+        target: /root/app
+      - type: volume
+        source: api_airtmp
+        target: /root/tmp
+        volume:
+          nocopy: true
+
 volumes:
-  db_kratos_data:
+  db_kratos_general_data:
+  api_airtmp:

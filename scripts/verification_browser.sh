@@ -5,8 +5,8 @@ if [ -z "$email" ]; then
   email=1@local
 fi
 
-publicEndpoint=http://localhost:4533
-adminEndpoint=http://localhost:4534
+publicEndpoint=http://localhost:4433
+adminEndpoint=http://localhost:4434
 
 echo "------------- [create verification flow] -------------"
 responseToChoozeMethod=$(curl -v -s -X GET \

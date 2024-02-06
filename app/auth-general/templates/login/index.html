@@ -1,0 +1,11 @@
+{{define "login/index.html"}}
+{{template "layout/_header.html" .}}
+
+<h2>{{.Title}}</h2>
+{{template "login/_form.html" .}}
+
+<!-- <a hx-get="/recovery" hx-swap="outerHTML" hx-target="this" hx-push-url="true" >Forget password</a> -->
+<a href="/recovery">Forget password</a> 
+
+{{template "layout/_footer.html" .}}
+{{end}}

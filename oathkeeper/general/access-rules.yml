@@ -1,0 +1,63 @@
+- id: "kratos:general"
+  match:
+    url: http://localhost:8100/auth/<.*>
+    methods:
+      - OPTIONS
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - PATCH
+  authenticators:
+    - handler: noop
+  authorizer:
+    handler: allow
+  mutators:
+    - handler: noop
+  errors:
+    - handler: json
+      config:
+        verbose: true
+
+- id: "app-sample:public"
+  match:
+    url: http://localhost:8100/app/sample/(public/|auth/)<.*>
+    methods:
+      - OPTIONS
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - PATCH
+  authenticators:
+    - handler: noop
+  authorizer:
+    handler: allow
+  mutators:
+    - handler: noop
+  errors:
+    - handler: json
+      config:
+        verbose: true
+
+- id: "app-sample:auth-required"
+  match:
+    url: http://localhost:8100/app/sample/<(?!(public/)).*>
+    methods:
+      - OPTIONS
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - PATCH
+  authenticators:
+    - handler: cookie_session
+  authorizer:
+    handler: allow
+  mutators:
+    - handler: id_token
+  errors:
+    - handler: json
+      config:
+        verbose: true
+

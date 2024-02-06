@@ -140,7 +140,7 @@ uiで返却された項目は、本来はUIのレンダリングに使用しま�
 
 **フォームレンダリング例**
 ```html
-<form action="http://localhost:4533/self-service/registration?flow=63ef44ef-1c95-4792-9bf5-0fd0b3def246" method="POST">
+<form action="http://localhost:4433/self-service/registration?flow=63ef44ef-1c95-4792-9bf5-0fd0b3def246" method="POST">
   <input
     name="csrf_token"
     type="hidden"
@@ -182,9 +182,9 @@ uiで返却された項目は、本来はUIのレンダリングに使用しま�
   "type": "browser",
   "expires_at": "2024-01-31T10:47:47.927093211Z",
   "issued_at": "2024-01-31T09:47:47.927093211Z",
-  "request_url": "http://localhost:4533/self-service/registration/browser",
+  "request_url": "http://localhost:4433/self-service/registration/browser",
   "ui": {
-    "action": "http://localhost:4533/self-service/registration?flow=63ef44ef-1c95-4792-9bf5-0fd0b3def246",
+    "action": "http://localhost:4433/self-service/registration?flow=63ef44ef-1c95-4792-9bf5-0fd0b3def246",
     "method": "POST",
     "nodes": [
       {
@@ -348,7 +348,7 @@ Registration flowからVerification flowへ切り替わるため、次のflowを
     "identity": {
       "id": "584cd5aa-fe7a-4b62-adfb-8452e4dd33bc",
       "schema_id": "user_v1",
-      "schema_url": "http://localhost:4533/schemas/dXNlcl92MQ",
+      "schema_url": "http://localhost:4433/schemas/dXNlcl92MQ",
       "state": "active",
       "state_changed_at": "2024-01-31T09:47:48.418015253Z",
       "traits": {
@@ -390,7 +390,7 @@ Registration flowからVerification flowへ切り替わるため、次のflowを
   "identity": {
     "id": "584cd5aa-fe7a-4b62-adfb-8452e4dd33bc",
     "schema_id": "user_v1",
-    "schema_url": "http://localhost:4533/schemas/dXNlcl92MQ",
+    "schema_url": "http://localhost:4433/schemas/dXNlcl92MQ",
     "state": "active",
     "state_changed_at": "2024-01-31T09:47:48.418015253Z",
     "traits": {
@@ -426,7 +426,7 @@ Registration flowからVerification flowへ切り替わるため、次のflowを
       "flow": {
         "id": "f13fa3be-b40b-4ed7-9bd8-57cf641785d5",
         "verifiable_address": "1@local",
-        "url": "http://localhost:8000/auth/verification?flow=f13fa3be-b40b-4ed7-9bd8-57cf641785d5"
+        "url": "http://localhost:3000/auth/verification?flow=f13fa3be-b40b-4ed7-9bd8-57cf641785d5"
       }
     }
   ]
@@ -440,7 +440,7 @@ Registration flowからVerification flowへ切り替わるため、次のflowを
 
 **メールアドレス検証メール例**
 ```
-Hi, please verify your account by entering the following code: 312996 or clicking the following link: http://localhost:4533/self-service/verification?code=312996&flow=d229d11d-8273-4b7e-b05e-57490c0310f0
+Hi, please verify your account by entering the following code: 312996 or clicking the following link: http://localhost:4433/self-service/verification?code=312996&flow=d229d11d-8273-4b7e-b05e-57490c0310f0
 ```
 
 メール本文中に記載されている6桁の検証コードを以下のプロンプトに入力し、Enterキーを押下すると、4. Verification flow(mothod: code)送信APIが実行されます。
@@ -467,10 +467,10 @@ endpoint: `GET {{ kratos public endpoint }}/self-service/verification/flows`
   "type": "browser",
   "expires_at": "2024-01-31T10:47:48.426066Z",
   "issued_at": "2024-01-31T09:47:48.426066Z",
-  "request_url": "http://localhost:4533/self-service/registration/browser?return_to=",
+  "request_url": "http://localhost:4433/self-service/registration/browser?return_to=",
   "active": "code",
   "ui": {
-    "action": "http://localhost:4533/self-service/verification?flow=f13fa3be-b40b-4ed7-9bd8-57cf641785d5",
+    "action": "http://localhost:4433/self-service/verification?flow=f13fa3be-b40b-4ed7-9bd8-57cf641785d5",
     "method": "POST",
     "nodes": [
       {
@@ -541,7 +541,7 @@ endpoint: `GET {{ kratos public endpoint }}/self-service/verification/flows`
     ],
     "messages": [
       {
-        "id": 1080003,
+        "id": 1030003,
         "text": "An email containing a verification code has been sent to the email address you provided. If you have not received an email, check the spelling of the address and make sure to use the address you registered with.",
         "type": "info",
         "context": {}
@@ -577,10 +577,10 @@ selfservice:
   "type": "browser",
   "expires_at": "2024-01-31T10:47:48.426066Z",
   "issued_at": "2024-01-31T09:47:48.426066Z",
-  "request_url": "http://localhost:4533/self-service/registration/browser?return_to=",
+  "request_url": "http://localhost:4433/self-service/registration/browser?return_to=",
   "active": "code",
   "ui": {
-    "action": "http://localhost:8000/auth",
+    "action": "http://localhost:3000/auth",
     "method": "GET",
     "nodes": [
       {
@@ -601,7 +601,7 @@ selfservice:
         "type": "a",
         "group": "code",
         "attributes": {
-          "href": "http://localhost:8000/auth",
+          "href": "http://localhost:3000/auth",
           "title": {
             "id": 1070009,
             "text": "Continue",
@@ -622,7 +622,7 @@ selfservice:
     ],
     "messages": [
       {
-        "id": 1080002,
+        "id": 1030002,
         "text": "You successfully verified your email address.",
         "type": "success"
       }
@@ -664,9 +664,9 @@ Login flowの初期化を行います。
   "type": "browser",
   "expires_at": "2024-01-31T05:08:59.442571343Z",
   "issued_at": "2024-01-31T04:08:59.442571343Z",
-  "request_url": "http://localhost:4533/self-service/login/browser",
+  "request_url": "http://localhost:4433/self-service/login/browser",
   "ui": {
-    "action": "http://localhost:4533/self-service/login?flow=85a83b3d-835a-4ef1-a2e3-2e7d7cf8f826",
+    "action": "http://localhost:4433/self-service/login?flow=85a83b3d-835a-4ef1-a2e3-2e7d7cf8f826",
     "method": "POST",
     "nodes": [
       {
@@ -777,7 +777,7 @@ session情報が返却されます。
     "identity": {
       "id": "793126a9-3c8b-43ec-89d0-e48395235131",
       "schema_id": "user_v1",
-      "schema_url": "http://localhost:4533/schemas/dXNlcl92MQ",
+      "schema_url": "http://localhost:4433/schemas/dXNlcl92MQ",
       "state": "active",
       "state_changed_at": "2024-01-31T03:53:49.789625Z",
       "traits": {
@@ -866,7 +866,7 @@ endpoint: `GET {{ kratos public endpoint }}/sessions/whoami`
   "identity": {
     "id": "793126a9-3c8b-43ec-89d0-e48395235131",
     "schema_id": "user_v1",
-    "schema_url": "http://localhost:4533/schemas/dXNlcl92MQ",
+    "schema_url": "http://localhost:4433/schemas/dXNlcl92MQ",
     "state": "active",
     "state_changed_at": "2024-01-31T03:53:49.789625Z",
     "traits": {
@@ -982,10 +982,10 @@ Recovery flowの初期化を行います。
   "type": "browser",
   "expires_at": "2024-01-31T05:26:56.129178508Z",
   "issued_at": "2024-01-31T04:26:56.129178508Z",
-  "request_url": "http://localhost:4533/self-service/recovery/browser",
+  "request_url": "http://localhost:4433/self-service/recovery/browser",
   "active": "code",
   "ui": {
-    "action": "http://localhost:4533/self-service/recovery?flow=3a6935f7-4b0b-4060-b770-50f8150040b7",
+    "action": "http://localhost:4433/self-service/recovery?flow=3a6935f7-4b0b-4060-b770-50f8150040b7",
     "method": "POST",
     "nodes": [
       {
@@ -1066,10 +1066,10 @@ endpoint: `POST {{ kratos public endpoint }}/self-service/recovery`
   "type": "browser",
   "expires_at": "2024-01-31T05:26:56.129178Z",
   "issued_at": "2024-01-31T04:26:56.129178Z",
-  "request_url": "http://localhost:4533/self-service/recovery/browser",
+  "request_url": "http://localhost:4433/self-service/recovery/browser",
   "active": "code",
   "ui": {
-    "action": "http://localhost:4533/self-service/recovery?flow=3a6935f7-4b0b-4060-b770-50f8150040b7",
+    "action": "http://localhost:4433/self-service/recovery?flow=3a6935f7-4b0b-4060-b770-50f8150040b7",
     "method": "POST",
     "nodes": [
       {
@@ -1202,10 +1202,10 @@ Recovery flow(mothod: code)送信APIが呼び出し、アカウントのパス�
     "id": "browser_location_change_required",
     "code": 422,
     "status": "Unprocessable Entity",
-    "reason": "In order to complete this flow please redirect the browser to: http://localhost:8000/auth/settings?flow=4d1e39fa-2554-4a86-913a-b4ad2f36719a",
+    "reason": "In order to complete this flow please redirect the browser to: http://localhost:3000/auth/settings?flow=4d1e39fa-2554-4a86-913a-b4ad2f36719a",
     "message": "browser location change required"
   },
-  "redirect_browser_to": "http://localhost:8000/auth/settings?flow=4d1e39fa-2554-4a86-913a-b4ad2f36719a"
+  "redirect_browser_to": "http://localhost:3000/auth/settings?flow=4d1e39fa-2554-4a86-913a-b4ad2f36719a"
 }
 ```
 
@@ -1231,9 +1231,9 @@ endpoint: `GET {{ kratos public endpoint }}/self-service/settings/flows`
   "type": "browser",
   "expires_at": "2024-01-31T05:57:18.712901Z",
   "issued_at": "2024-01-31T04:57:18.712901Z",
-  "request_url": "http://localhost:4533/self-service/recovery?flow=3a6935f7-4b0b-4060-b770-50f8150040b7",
+  "request_url": "http://localhost:4433/self-service/recovery?flow=3a6935f7-4b0b-4060-b770-50f8150040b7",
   "ui": {
-    "action": "http://localhost:4533/self-service/settings?flow=4d1e39fa-2554-4a86-913a-b4ad2f36719a",
+    "action": "http://localhost:4433/self-service/settings?flow=4d1e39fa-2554-4a86-913a-b4ad2f36719a",
     "method": "POST",
     "nodes": [
       {
@@ -1380,7 +1380,7 @@ endpoint: `GET {{ kratos public endpoint }}/self-service/settings/flows`
   "identity": {
     "id": "793126a9-3c8b-43ec-89d0-e48395235131",
     "schema_id": "user_v1",
-    "schema_url": "http://localhost:4533/schemas/dXNlcl92MQ",
+    "schema_url": "http://localhost:4433/schemas/dXNlcl92MQ",
     "state": "active",
     "state_changed_at": "2024-01-31T03:53:49.789625Z",
     "traits": {
@@ -1431,9 +1431,9 @@ Settings flowを実行します。
   "type": "browser",
   "expires_at": "2024-01-31T05:57:18.712901Z",
   "issued_at": "2024-01-31T04:57:18.712901Z",
-  "request_url": "http://localhost:4533/self-service/recovery?flow=3a6935f7-4b0b-4060-b770-50f8150040b7",
+  "request_url": "http://localhost:4433/self-service/recovery?flow=3a6935f7-4b0b-4060-b770-50f8150040b7",
   "ui": {
-    "action": "http://localhost:4533/self-service/settings?flow=7f9d8a25-0265-4f53-9d39-3d0570668812",
+    "action": "http://localhost:4433/self-service/settings?flow=7f9d8a25-0265-4f53-9d39-3d0570668812",
     "method": "POST",
     "nodes": [
       {
@@ -1577,7 +1577,7 @@ Settings flowを実行します。
   "identity": {
     "id": "793126a9-3c8b-43ec-89d0-e48395235131",
     "schema_id": "user_v1",
-    "schema_url": "http://localhost:4533/schemas/dXNlcl92MQ",
+    "schema_url": "http://localhost:4433/schemas/dXNlcl92MQ",
     "state": "active",
     "state_changed_at": "2024-01-31T03:53:49.789625Z",
     "traits": {
@@ -1655,9 +1655,9 @@ Settings flowの初期化を行います。
   "type": "browser",
   "expires_at": "2024-01-31T09:54:11.474883208Z",
   "issued_at": "2024-01-31T08:54:11.474883208Z",
-  "request_url": "http://localhost:4533/self-service/settings/browser",
+  "request_url": "http://localhost:4433/self-service/settings/browser",
   "ui": {
-    "action": "http://localhost:4533/self-service/settings?flow=9f9803c5-95d9-46b6-93ca-7701ee187812",
+    "action": "http://localhost:4433/self-service/settings?flow=9f9803c5-95d9-46b6-93ca-7701ee187812",
     "method": "POST",
     "nodes": [
       {
@@ -1794,7 +1794,7 @@ Settings flowの初期化を行います。
   "identity": {
     "id": "793126a9-3c8b-43ec-89d0-e48395235131",
     "schema_id": "user_v1",
-    "schema_url": "http://localhost:4533/schemas/dXNlcl92MQ",
+    "schema_url": "http://localhost:4433/schemas/dXNlcl92MQ",
     "state": "active",
     "state_changed_at": "2024-01-31T03:53:49.789625Z",
     "traits": {
@@ -1846,9 +1846,9 @@ endpoint: `POST {{ kratos public endpoint }}/self-service/settings`
   "type": "browser",
   "expires_at": "2024-01-31T09:54:11.474883Z",
   "issued_at": "2024-01-31T08:54:11.474883Z",
-  "request_url": "http://localhost:4533/self-service/settings/browser",
+  "request_url": "http://localhost:4433/self-service/settings/browser",
   "ui": {
-    "action": "http://localhost:4533/self-service/settings?flow=e54f2132-8c51-40db-9d9b-c52ded875083",
+    "action": "http://localhost:4433/self-service/settings?flow=e54f2132-8c51-40db-9d9b-c52ded875083",
     "method": "POST",
     "nodes": [
       {
@@ -1992,7 +1992,7 @@ endpoint: `POST {{ kratos public endpoint }}/self-service/settings`
   "identity": {
     "id": "793126a9-3c8b-43ec-89d0-e48395235131",
     "schema_id": "user_v1",
-    "schema_url": "http://localhost:4533/schemas/dXNlcl92MQ",
+    "schema_url": "http://localhost:4433/schemas/dXNlcl92MQ",
     "state": "active",
     "state_changed_at": "2024-01-31T03:53:49.789625Z",
     "traits": {
@@ -2078,9 +2078,9 @@ Settings flowの初期化を行います。
   "type": "browser",
   "expires_at": "2024-01-31T10:11:13.388073334Z",
   "issued_at": "2024-01-31T09:11:13.388073334Z",
-  "request_url": "http://localhost:4533/self-service/settings/browser",
+  "request_url": "http://localhost:4433/self-service/settings/browser",
   "ui": {
-    "action": "http://localhost:4533/self-service/settings?flow=38c9c3ee-45c8-4b98-9d8b-d4850f5e8408",
+    "action": "http://localhost:4433/self-service/settings?flow=38c9c3ee-45c8-4b98-9d8b-d4850f5e8408",
     "method": "POST",
     "nodes": [
       {
@@ -2217,7 +2217,7 @@ Settings flowの初期化を行います。
   "identity": {
     "id": "793126a9-3c8b-43ec-89d0-e48395235131",
     "schema_id": "user_v1",
-    "schema_url": "http://localhost:4533/schemas/dXNlcl92MQ",
+    "schema_url": "http://localhost:4433/schemas/dXNlcl92MQ",
     "state": "active",
     "state_changed_at": "2024-01-31T03:53:49.789625Z",
     "traits": {
@@ -2274,9 +2274,9 @@ emailを更新した場合（変更があった場合）のみ、レスポンス
   "type": "browser",
   "expires_at": "2024-01-31T10:11:13.388073Z",
   "issued_at": "2024-01-31T09:11:13.388073Z",
-  "request_url": "http://localhost:4533/self-service/settings/browser",
+  "request_url": "http://localhost:4433/self-service/settings/browser",
   "ui": {
-    "action": "http://localhost:4533/self-service/settings?flow=fb01878b-2597-4116-ad7d-2d776dcb3cae",
+    "action": "http://localhost:4433/self-service/settings?flow=fb01878b-2597-4116-ad7d-2d776dcb3cae",
     "method": "POST",
     "nodes": [
       {
@@ -2422,7 +2422,7 @@ emailを更新した場合（変更があった場合）のみ、レスポンス
   "identity": {
     "id": "793126a9-3c8b-43ec-89d0-e48395235131",
     "schema_id": "user_v1",
-    "schema_url": "http://localhost:4533/schemas/dXNlcl92MQ",
+    "schema_url": "http://localhost:4433/schemas/dXNlcl92MQ",
     "state": "active",
     "traits": {
       "email": "updated-1@local",
@@ -2460,7 +2460,7 @@ emailを更新した場合（変更があった場合）のみ、レスポンス
       "flow": {
         "id": "bf045695-1d9d-4f19-ab8c-f4ddf0dd388d",
         "verifiable_address": "updated-1@local",
-        "url": "http://localhost:8000/auth/verification?flow=bf045695-1d9d-4f19-ab8c-f4ddf0dd388d"
+        "url": "http://localhost:3000/auth/verification?flow=bf045695-1d9d-4f19-ab8c-f4ddf0dd388d"
       }
     }
   ]

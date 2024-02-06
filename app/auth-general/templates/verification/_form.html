@@ -1,0 +1,23 @@
+{{define "verification/_form.html"}}
+<form 
+  id="verification-form" 
+  hx-post="/verification/form?flow={{.VerificationFlowID}}"
+  hx-swap="outerHTML" 
+  hx-target="this"
+  > 
+  <input
+    name="csrf_token"
+    type="hidden"
+    value="{{.CsrfToken}}"
+  />
+  <div>
+    <label>Verification code</label>
+    <input name="code" required min="6" max="6">
+  </div>
+  <button>Verification</button>
+  {{ if ne .ErrorMessage "" }}
+    <div>{{.ErrorMessage}}</div>
+    <a href="/verification">Restart verification flow</a>
+  {{end}}
+</form>
+{{end}}

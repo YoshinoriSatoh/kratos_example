@@ -1,7 +1,7 @@
 #!/bin/sh
 
-publicEndpoint=http://localhost:4533
-adminEndpoint=http://localhost:4534
+publicEndpoint=http://localhost:4433
+adminEndpoint=http://localhost:4434
 
 sessionToken=$(cat .session_token)
 echo $sessionToken

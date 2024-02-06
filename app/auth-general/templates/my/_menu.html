@@ -1,0 +1,22 @@
+{{define "my/_menu.html"}}
+  <div>
+    <div>Logged in Identity ID: {{ .Session.Identity.Id }}</div>
+  </div>
+
+  <ul>
+    <li>
+      <form hx-post="/logout" hx-swap="outerHTML" hx-target="this">
+        <input
+          name="token"
+          type="hidden"
+          value="{{.LogoutToken}}" />
+        <button>Logout</button>
+      </form>
+    </li>
+  </ul>
+
+  {{ if ne .ErrorMessage "" }}
+    <div>{{.ErrorMessage}}</div>
+  {{end}}
+</form> 
+{{end}}
