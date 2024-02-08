@@ -11,7 +11,7 @@ dsn: postgres://kratos:secret@db-kratos-general:5432/kratos?sslmode=disable&max_
 serve:
   public:
     port: 4433
-    base_url: http://localhost:3000/auth
+    base_url: http://localhost:4433
     request_log:
       disable_for_health: true
   admin:

@@ -16,7 +16,7 @@ var kratosPublicEndpoint string = "http://kratos-general:4433"
 var kratosPublicClient *kratosclientgo.APIClient
 
 func init() {
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{AddSource: true})))
 
 	kratosPublicConfigration := kratosclientgo.NewConfiguration()
 	kratosPublicConfigration.Servers = []kratosclientgo.ServerConfiguration{{URL: kratosPublicEndpoint}}

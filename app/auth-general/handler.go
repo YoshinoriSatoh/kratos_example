@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -272,7 +274,6 @@ func handleGetLogin(c *gin.Context) {
 	slog.Info(fmt.Sprintf("%v", session))
 	if err == nil {
 		for _, v := range session.AuthenticationMethods {
-			slog.Info(*v.Method)
 			if *v.Method == "code_recovery" {
 				var logoutFlow *kratosclientgo.LogoutFlow
 				logoutFlow, response, err := kratosPublicClient.FrontendApi.
@@ -314,6 +315,7 @@ func handleGetLogin(c *gin.Context) {
 		loginFlow, response, err = kratosPublicClient.FrontendApi.
 			CreateBrowserLoginFlow(c).
 			Refresh(true).
+			Cookie(cookie).
 			Execute()
 		if err != nil {
 			slog.Error("CreateLoginFlow Error", "LoginFlow", loginFlow, "Response", response, "Error", err)
@@ -326,7 +328,7 @@ func handleGetLogin(c *gin.Context) {
 		slog.Info("CreateLoginFlow Succeed", "LoginFlow", loginFlow, "Response", response)
 
 		setCookie(c, response)
-		c.Redirect(303, fmt.Sprintf("%s/login?flow=%s", generalEndpoint, loginFlow.Id))
+		c.Redirect(303, fmt.Sprintf("%s/login?flow=%s&return_to=%s", generalEndpoint, loginFlow.Id, returnTo))
 		return
 	}
 
@@ -793,6 +795,26 @@ func handleGetProfileSettingsEdit(c *gin.Context) {
 		csrfToken    string
 	)
 
+	editSettingParamStr, _ := c.Cookie("kratos_sample_edit_setting")
+	slog.Info(editSettingParamStr)
+	editSettingParams, err := base64.URLEncoding.DecodeString(editSettingParamStr)
+	if err != nil {
+		slog.Error(err.Error())
+	}
+	slog.Info(string(editSettingParams))
+	c.SetCookie("kratos_sample_edit_setting", "", -1, "/", "localhost", false, true)
+	var params struct {
+		Nickname  string `json:"nickname"`
+		Birthdate string `json:"birthdate"`
+	}
+	err = json.Unmarshal(editSettingParams, &params)
+	if err != nil {
+		slog.Error(err.Error())
+	}
+	slog.Info(fmt.Sprintf("%v", params))
+	slog.Info(params.Nickname)
+	slog.Info(params.Birthdate)
+
 	// browser flowでは、ブラウザのcookieをそのままkratosへ受け渡す
 	cookie := c.Request.Header.Get("Cookie")
 
@@ -835,7 +857,7 @@ func handleGetProfileSettingsEdit(c *gin.Context) {
 		})
 		return
 	}
-	slog.Info("GetRegisrationFlow Succeed", "SettingsFlow", settingsFlow, "Response", response)
+	slog.Info("GetSettingsFlow Succeed", "SettingsFlow", settingsFlow, "Response", response)
 
 	// flow の ui から csrf_token を取得
 	csrfToken, err = getCsrfTokenFromFlowHttpResponse(response)
@@ -848,11 +870,22 @@ func handleGetProfileSettingsEdit(c *gin.Context) {
 	setCookie(c, response)
 
 	// flowの情報に従ってレンダリング
+	slog.Info(params.Nickname)
+	slog.Info(params.Birthdate)
+	if params.Nickname == "" {
+		params.Nickname = session.Identity.Traits.(map[string]interface{})["nickname"].(string)
+	}
+	if params.Birthdate == "" {
+		params.Birthdate = session.Identity.Traits.(map[string]interface{})["birthdate"].(string)
+	}
+	slog.Info(params.Nickname)
+	slog.Info(params.Birthdate)
 	c.HTML(http.StatusOK, "settings/profile_edit.html", gin.H{
 		"Title":          "Profile",
 		"SettingsFlowID": settingsFlow.Id,
 		"CsrfToken":      csrfToken,
-		"Session":        session,
+		"Nickname":       params.Nickname,
+		"Birthdate":      params.Birthdate,
 	})
 }
 
@@ -916,10 +949,12 @@ func handleGetProfileSettingsForm(c *gin.Context) {
 	}
 	authenticateAt := session.AuthenticatedAt.In(jst)
 	slog.Info(fmt.Sprintf("%v", authenticateAt))
-	slog.Info(fmt.Sprintf("%v", time.Now().Add(time.Minute*10)))
-	if authenticateAt.After(time.Now().Add(time.Minute * 10)) {
-		c.Writer.Header().Set("HX-Redirect", fmt.Sprintf("%s/login?return_to=%s", generalEndpoint, "/settings/profile_edit?flow="+flowID))
+	slog.Info(fmt.Sprintf("%v", time.Now().Add(-time.Minute*10)))
+	if authenticateAt.Before(time.Now().Add(-time.Minute * 10)) {
+		slog.Info("---------------")
+		c.Writer.Header().Set("HX-Redirect", fmt.Sprintf("%s/login?return_to=%s", generalEndpoint, "/settings/profile/edit?flow="+settingsFlow.Id))
 		c.Status(200)
+		return
 	}
 
 	// flow の ui から csrf_token を取得
@@ -933,11 +968,15 @@ func handleGetProfileSettingsForm(c *gin.Context) {
 	setCookie(c, response)
 
 	// flowの情報に従ってレンダリング
+	nickname := session.Identity.Traits.(map[string]interface{})["nickname"].(string)
+	birthdate := session.Identity.Traits.(map[string]interface{})["birthdate"].(string)
 	c.HTML(http.StatusOK, "settings/_profile_form.html", gin.H{
 		"Title":          "Profile",
 		"SettingsFlowID": settingsFlow.Id,
 		"CsrfToken":      csrfToken,
 		"Session":        session,
+		"Nickname":       nickname,
+		"Birthdate":      birthdate,
 	})
 }
 
@@ -952,7 +991,7 @@ func handlePostSettingsProfileForm(c *gin.Context) {
 
 	var email string
 
-	session, _, err := toSession(cookie)
+	session, _, _ := toSession(cookie)
 	slog.Info(fmt.Sprintf("%v", session))
 	jst, err := time.LoadLocation("Asia/Tokyo")
 	if err != nil {
@@ -960,10 +999,24 @@ func handlePostSettingsProfileForm(c *gin.Context) {
 	}
 	authenticateAt := session.AuthenticatedAt.In(jst)
 	slog.Info(fmt.Sprintf("%v", authenticateAt))
-	slog.Info(fmt.Sprintf("%v", time.Now().Add(time.Minute*10)))
-	if authenticateAt.Before(time.Now().Add(time.Minute * 10)) {
-		c.Writer.Header().Set("HX-Redirect", fmt.Sprintf("%s/login?return_to=%s", generalEndpoint, "/settings/profile_edit?flow="+flowID))
+	slog.Info(fmt.Sprintf("%v", time.Now().Add(time.Second*1)))
+	if authenticateAt.Before(time.Now().Add(-time.Minute * 1)) {
+		cookieValue := struct {
+			Nickname  string `json:"nickname"`
+			Birthdate string `json:"birthdate"`
+		}{
+			Nickname:  nickname,
+			Birthdate: birthdate,
+		}
+		cookieString, _ := json.Marshal(cookieValue)
+		slog.Info(string(cookieString))
+
+		base64CookieString := base64.URLEncoding.EncodeToString(cookieString)
+		slog.Info(base64CookieString)
+		c.SetCookie("kratos_sample_edit_setting", base64CookieString, 3600, "/", "localhost", false, true)
+		c.Writer.Header().Set("HX-Redirect", fmt.Sprintf("%s/login?return_to=%s", generalEndpoint, "/settings/profile/edit?flow="+flowID))
 		c.Status(200)
+		return
 	}
 
 	if err == nil {
