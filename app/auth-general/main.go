@@ -37,6 +37,7 @@ func main() {
 	e.Use(gin.Recovery())
 
 	e.LoadHTMLGlob("templates/**/*.html")
+	e.Static("/static", "./static")
 
 	e.GET("/public/health", func(c *gin.Context) {
 		c.Status(http.StatusOK)
@@ -63,12 +64,14 @@ func main() {
 	e.POST("/recovery/complete", completeRecoveryFlow)
 
 	// Settings
-	e.GET("/settings", handleGetSettings)
+	e.GET("/settings/password", handleGetPasswordSettings)
 	e.POST("/settings/password_form", handlePostSettingsPasswordForm)
+	e.GET("/settings/profile/view", handleGetProfileSettingsView)
+	e.GET("/settings/profile/edit", handleGetProfileSettingsEdit)
+	e.GET("/settings/profile_form", handleGetProfileSettingsForm)
+	e.POST("/settings/profile_form", handlePostSettingsProfileForm)
 
-	e.GET("/my/menu", handleGetMyMenu)
-
-	e.GET("/home", handleGetHome)
+	e.GET("/", handleGetHome)
 
 	e.Run(":3000")
 }

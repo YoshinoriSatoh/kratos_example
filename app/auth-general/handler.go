@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	kratosclientgo "github.com/ory/kratos-client-go"
@@ -265,10 +266,45 @@ func handleGetLogin(c *gin.Context) {
 	// browser flowでは、ブラウザのcookieをそのままkratosへ受け渡す
 	cookie := c.Request.Header.Get("Cookie")
 
-	_, _, err = toSession(cookie)
+	returnTo := c.Query("return_to")
+
+	session, _, err := toSession(cookie)
+	slog.Info(fmt.Sprintf("%v", session))
 	if err == nil {
-		c.Redirect(303, fmt.Sprintf("%s/home", generalEndpoint))
-		return
+		for _, v := range session.AuthenticationMethods {
+			slog.Info(*v.Method)
+			if *v.Method == "code_recovery" {
+				var logoutFlow *kratosclientgo.LogoutFlow
+				logoutFlow, response, err := kratosPublicClient.FrontendApi.
+					CreateBrowserLogoutFlow(c).
+					Cookie(cookie).
+					Execute()
+				if err != nil {
+					slog.Error("CreateLogoutFlow Error", "LogoutFlow", logoutFlow, "Response", response, "Error", err)
+					c.Writer.Header().Set("HX-Redirect", fmt.Sprintf("%s/login", generalEndpoint))
+					c.Status(200)
+					return
+				}
+
+				// Logout Flow の送信(完了)
+				response, err = kratosPublicClient.FrontendApi.
+					UpdateLogoutFlow(c).
+					Token(logoutFlow.LogoutToken).
+					Cookie(cookie).
+					Execute()
+				if err != nil {
+					slog.Error("Update Logout Flow Error", "Response", response, "Error", err)
+				} else {
+					slog.Info("UpdateLoginFlow Succeed", "Response", response)
+				}
+
+				c.SetCookie("kratos_general_session", "", -1, "/", "localhost", false, true)
+				c.Redirect(303, fmt.Sprintf("%s/login", generalEndpoint))
+				return
+			}
+		}
+		// c.Redirect(303, fmt.Sprintf("%s/", generalEndpoint))
+		// return
 	}
 
 	flowID := c.Query("flow")
@@ -277,6 +313,7 @@ func handleGetLogin(c *gin.Context) {
 	if flowID == "" {
 		loginFlow, response, err = kratosPublicClient.FrontendApi.
 			CreateBrowserLoginFlow(c).
+			Refresh(true).
 			Execute()
 		if err != nil {
 			slog.Error("CreateLoginFlow Error", "LoginFlow", loginFlow, "Response", response, "Error", err)
@@ -322,6 +359,7 @@ func handleGetLogin(c *gin.Context) {
 	c.HTML(http.StatusOK, "login/index.html", gin.H{
 		"Title":        "Login",
 		"LoginFlowID":  loginFlow.Id,
+		"ReturnTo":     returnTo,
 		"CsrfToken":    csrfToken,
 		"ErrorMessage": uiErrorMessage,
 	})
@@ -331,6 +369,7 @@ func handleGetLogin(c *gin.Context) {
 func handlePostLoginForm(c *gin.Context) {
 	cookie := c.Request.Header.Get("Cookie") // browser flowでは、ブラウザのcookieをそのままkratosへ受け渡す
 	flowID := c.Query("flow")
+	returnTo := c.Query("return_to")
 	csrfToken := c.PostForm("csrf_token")
 	identifier := c.PostForm("identifier")
 	password := c.PostForm("password")
@@ -366,7 +405,11 @@ func handlePostLoginForm(c *gin.Context) {
 	setCookie(c, response)
 
 	// Login flow成功時はホーム画面へリダイレクト
-	c.Writer.Header().Set("HX-Redirect", fmt.Sprintf("%s/home", generalEndpoint))
+	if returnTo != "" {
+		c.Writer.Header().Set("HX-Redirect", returnTo)
+	} else {
+		c.Writer.Header().Set("HX-Redirect", fmt.Sprintf("%s/", generalEndpoint))
+	}
 	c.Status(200)
 }
 
@@ -374,12 +417,22 @@ func handlePostLoginForm(c *gin.Context) {
 func handlePostLogout(c *gin.Context) {
 	cookie := c.Request.Header.Get("Cookie") // browser flowでは、ブラウザのcookieをそのままkratosへ受け渡す
 
-	token := c.PostForm("token")
+	var logoutFlow *kratosclientgo.LogoutFlow
+	logoutFlow, response, err := kratosPublicClient.FrontendApi.
+		CreateBrowserLogoutFlow(c).
+		Cookie(cookie).
+		Execute()
+	if err != nil {
+		slog.Error("CreateLogoutFlow Error", "LogoutFlow", logoutFlow, "Response", response, "Error", err)
+		c.Writer.Header().Set("HX-Redirect", fmt.Sprintf("%s/login", generalEndpoint))
+		c.Status(200)
+		return
+	}
 
 	// Logout Flow の送信(完了)
-	response, err := kratosPublicClient.FrontendApi.
+	response, err = kratosPublicClient.FrontendApi.
 		UpdateLogoutFlow(c).
-		Token(token).
+		Token(logoutFlow.LogoutToken).
 		Cookie(cookie).
 		Execute()
 	if err != nil {
@@ -394,7 +447,7 @@ func handlePostLogout(c *gin.Context) {
 	// ログインセッションを削除
 	c.SetCookie("kratos_general_session", "", -1, "/", "localhost", false, true)
 
-	c.Writer.Header().Set("HX-Redirect", fmt.Sprintf("%s/login", generalEndpoint))
+	c.Writer.Header().Set("HX-Redirect", fmt.Sprintf("%s/", generalEndpoint))
 	c.Status(200)
 }
 
@@ -554,7 +607,7 @@ func completeRecoveryFlow(c *gin.Context) {
 }
 
 // Settings
-func handleGetSettings(c *gin.Context) {
+func handleGetPasswordSettings(c *gin.Context) {
 	var (
 		err            error
 		uiErrorMessage string
@@ -566,6 +619,8 @@ func handleGetSettings(c *gin.Context) {
 	// browser flowでは、ブラウザのcookieをそのままkratosへ受け渡す
 	cookie := c.Request.Header.Get("Cookie")
 
+	session, _, err := toSession(cookie)
+
 	flowID := c.Query("flow")
 
 	// flowID がない場合は新規にSettings Flow を作成してリダイレクト
@@ -576,7 +631,7 @@ func handleGetSettings(c *gin.Context) {
 			Execute()
 		if err != nil {
 			slog.Error("Create Settings Flow Error", "SettingsFlow", settingsFlow, "Response", response, "Error", err)
-			c.HTML(http.StatusOK, "settings/index.html", gin.H{
+			c.HTML(http.StatusOK, "settings/password.html", gin.H{
 				"Title":        "Settings",
 				"ErrorMessage": "Sorry, something went wrong. Please try again later.",
 			})
@@ -585,7 +640,7 @@ func handleGetSettings(c *gin.Context) {
 		slog.Info("CreateBrowserSettingsFlow Succeed", "SettingsFlow", settingsFlow, "Response", response)
 
 		setCookie(c, response)
-		c.Redirect(303, fmt.Sprintf("%s/settings?flow=%s", generalEndpoint, settingsFlow.Id))
+		c.Redirect(303, fmt.Sprintf("%s/settings/password?flow=%s", generalEndpoint, settingsFlow.Id))
 		return
 	}
 
@@ -597,7 +652,7 @@ func handleGetSettings(c *gin.Context) {
 		Execute()
 	if err != nil {
 		slog.Error("Get Settings Flow Error", "SettingsFlow", settingsFlow, "Response", response, "Error", err)
-		c.HTML(http.StatusOK, "settings/index.html", gin.H{
+		c.HTML(http.StatusOK, "settings/password.html", gin.H{
 			"Title":        "Settings",
 			"ErrorMessage": "Sorry, something went wrong. Please try again later.",
 		})
@@ -616,10 +671,11 @@ func handleGetSettings(c *gin.Context) {
 	setCookie(c, response)
 
 	// flowの情報に従ってレンダリング
-	c.HTML(http.StatusOK, "settings/index.html", gin.H{
+	c.HTML(http.StatusOK, "settings/password.html", gin.H{
 		"Title":          "Settings",
 		"SettingsFlowID": settingsFlow.Id,
 		"CsrfToken":      csrfToken,
+		"Session":        session,
 		"ErrorMessage":   uiErrorMessage,
 	})
 }
@@ -649,7 +705,7 @@ func handlePostSettingsPasswordForm(c *gin.Context) {
 	if err != nil {
 		slog.Error("Update Settings Flow Error", "Response", response, "Error", err)
 		c.HTML(http.StatusOK, "settings/_password_form.html", gin.H{
-			"Title":        "Verification",
+			"Title":        "Settings",
 			"ErrorMessage": "Sorry, something went wrong. Please try again later.",
 		})
 		return
@@ -664,27 +720,315 @@ func handlePostSettingsPasswordForm(c *gin.Context) {
 	c.Status(200)
 }
 
+func handleGetProfileSettingsView(c *gin.Context) {
+	// browser flowでは、ブラウザのcookieをそのままkratosへ受け渡す
+	cookie := c.Request.Header.Get("Cookie")
+
+	session, _, _ := toSession(cookie)
+
+	// flowID := c.Query("flow")
+
+	// // flowID がない場合は新規にSettings Flow を作成してリダイレクト
+	// if flowID == "" {
+	// 	settingsFlow, response, err = kratosPublicClient.FrontendApi.
+	// 		CreateBrowserSettingsFlow(c).
+	// 		Cookie(cookie).
+	// 		Execute()
+	// 	if err != nil {
+	// 		slog.Error("Create Settings Flow Error", "SettingsFlow", settingsFlow, "Response", response, "Error", err)
+	// 		c.HTML(http.StatusOK, "settings/profile_view.html", gin.H{
+	// 			"Title":        "Settings",
+	// 			"ErrorMessage": "Sorry, something went wrong. Please try again later.",
+	// 		})
+	// 		return
+	// 	}
+	// 	slog.Info("CreateBrowserSettingsFlow Succeed", "SettingsFlow", settingsFlow, "Response", response)
+
+	// 	setCookie(c, response)
+	// 	c.Redirect(303, fmt.Sprintf("%s/settings/profile/view?flow=%s", generalEndpoint, settingsFlow.Id))
+	// 	return
+	// }
+
+	// // flowID取得（CSRF Token の取得に必要）
+	// settingsFlow, response, err = kratosPublicClient.FrontendApi.
+	// 	GetSettingsFlow(context.Background()).
+	// 	Id(flowID).
+	// 	Cookie(cookie).
+	// 	Execute()
+	// if err != nil {
+	// 	slog.Error("Get Settings Flow Error", "SettingsFlow", settingsFlow, "Response", response, "Error", err)
+	// 	c.HTML(http.StatusOK, "settings/profile_view.html", gin.H{
+	// 		"Title":        "Settings",
+	// 		"ErrorMessage": "Sorry, something went wrong. Please try again later.",
+	// 	})
+	// 	return
+	// }
+	// slog.Info("GetRegisrationFlow Succeed", "SettingsFlow", settingsFlow, "Response", response)
+
+	// // flow の ui から csrf_token を取得
+	// csrfToken, err = getCsrfTokenFromFlowHttpResponse(response)
+	// if err != nil {
+	// 	slog.Error(err.Error())
+	// 	return
+	// }
+
+	// browser flowでは、kartosから受け取ったcookieをそのままブラウザへ返却する
+	// setCookie(c, response)
+
+	// flowの情報に従ってレンダリング
+	c.HTML(http.StatusOK, "settings/profile_view.html", gin.H{
+		"Title": "Profile",
+		// "SettingsFlowID": settingsFlow.Id,
+		// "CsrfToken":      csrfToken,
+		"Session": session,
+		// "ErrorMessage": uiErrorMessage,
+	})
+}
+
+func handleGetProfileSettingsEdit(c *gin.Context) {
+	var (
+		err          error
+		response     *http.Response
+		settingsFlow *kratosclientgo.SettingsFlow
+		csrfToken    string
+	)
+
+	// browser flowでは、ブラウザのcookieをそのままkratosへ受け渡す
+	cookie := c.Request.Header.Get("Cookie")
+
+	session, _, _ := toSession(cookie)
+
+	flowID := c.Query("flow")
+
+	// flowID がない場合は新規にSettings Flow を作成してリダイレクト
+	if flowID == "" {
+		settingsFlow, response, err = kratosPublicClient.FrontendApi.
+			CreateBrowserSettingsFlow(c).
+			Cookie(cookie).
+			Execute()
+		if err != nil {
+			slog.Error("Create Settings Flow Error", "SettingsFlow", settingsFlow, "Response", response, "Error", err)
+			c.HTML(http.StatusOK, "settings/profile_view.html", gin.H{
+				"Title":        "Settings",
+				"ErrorMessage": "Sorry, something went wrong. Please try again later.",
+			})
+			return
+		}
+		slog.Info("CreateBrowserSettingsFlow Succeed", "SettingsFlow", settingsFlow, "Response", response)
+
+		setCookie(c, response)
+		c.Redirect(303, fmt.Sprintf("%s/settings/profile/edit?flow=%s", generalEndpoint, settingsFlow.Id))
+		return
+	}
+
+	// flowID取得（CSRF Token の取得に必要）
+	settingsFlow, response, err = kratosPublicClient.FrontendApi.
+		GetSettingsFlow(context.Background()).
+		Id(flowID).
+		Cookie(cookie).
+		Execute()
+	if err != nil {
+		slog.Error("Get Settings Flow Error", "SettingsFlow", settingsFlow, "Response", response, "Error", err)
+		c.HTML(http.StatusOK, "settings/profile_form.html", gin.H{
+			"Title":        "Settings",
+			"ErrorMessage": "Sorry, something went wrong. Please try again later.",
+		})
+		return
+	}
+	slog.Info("GetRegisrationFlow Succeed", "SettingsFlow", settingsFlow, "Response", response)
+
+	// flow の ui から csrf_token を取得
+	csrfToken, err = getCsrfTokenFromFlowHttpResponse(response)
+	if err != nil {
+		slog.Error(err.Error())
+		return
+	}
+
+	// browser flowでは、kartosから受け取ったcookieをそのままブラウザへ返却する
+	setCookie(c, response)
+
+	// flowの情報に従ってレンダリング
+	c.HTML(http.StatusOK, "settings/profile_edit.html", gin.H{
+		"Title":          "Profile",
+		"SettingsFlowID": settingsFlow.Id,
+		"CsrfToken":      csrfToken,
+		"Session":        session,
+	})
+}
+
+func handleGetProfileSettingsForm(c *gin.Context) {
+	var (
+		err          error
+		response     *http.Response
+		settingsFlow *kratosclientgo.SettingsFlow
+		csrfToken    string
+	)
+
+	// browser flowでは、ブラウザのcookieをそのままkratosへ受け渡す
+	cookie := c.Request.Header.Get("Cookie")
+
+	session, _, _ := toSession(cookie)
+	flowID := c.Query("flow")
+
+	// flowID がない場合は新規にSettings Flow を作成してリダイレクト
+	if flowID == "" {
+		settingsFlow, response, err = kratosPublicClient.FrontendApi.
+			CreateBrowserSettingsFlow(c).
+			Cookie(cookie).
+			Execute()
+		if err != nil {
+			slog.Error("Create Settings Flow Error", "SettingsFlow", settingsFlow, "Response", response, "Error", err)
+			c.HTML(http.StatusOK, "settings/profile_view.html", gin.H{
+				"Title":        "Settings",
+				"ErrorMessage": "Sorry, something went wrong. Please try again later.",
+			})
+			return
+		}
+		slog.Info("CreateBrowserSettingsFlow Succeed", "SettingsFlow", settingsFlow, "Response", response)
+
+		// setCookie(c, response)
+		// // c.Redirect(303, fmt.Sprintf("%s/settings/profile/view?flow=%s", generalEndpoint, settingsFlow.Id))
+		// c.Writer.Header().Set("HX-Redirect", fmt.Sprintf("%s/settings/profile/view_form?flow=%s", generalEndpoint, settingsFlow.Id))
+		// c.Status(200)
+		// return
+	} else {
+
+		// flowID取得（CSRF Token の取得に必要）
+		settingsFlow, response, err = kratosPublicClient.FrontendApi.
+			GetSettingsFlow(context.Background()).
+			Id(flowID).
+			Cookie(cookie).
+			Execute()
+		if err != nil {
+			slog.Error("Get Settings Flow Error", "SettingsFlow", settingsFlow, "Response", response, "Error", err)
+			c.HTML(http.StatusOK, "settings/_profile_form.html", gin.H{
+				"Title":        "Settings",
+				"ErrorMessage": "Sorry, something went wrong. Please try again later.",
+			})
+			return
+		}
+		slog.Info("GetRegisrationFlow Succeed", "SettingsFlow", settingsFlow, "Response", response)
+	}
+
+	jst, err := time.LoadLocation("Asia/Tokyo")
+	if err != nil {
+		panic(err)
+	}
+	authenticateAt := session.AuthenticatedAt.In(jst)
+	slog.Info(fmt.Sprintf("%v", authenticateAt))
+	slog.Info(fmt.Sprintf("%v", time.Now().Add(time.Minute*10)))
+	if authenticateAt.After(time.Now().Add(time.Minute * 10)) {
+		c.Writer.Header().Set("HX-Redirect", fmt.Sprintf("%s/login?return_to=%s", generalEndpoint, "/settings/profile_edit?flow="+flowID))
+		c.Status(200)
+	}
+
+	// flow の ui から csrf_token を取得
+	csrfToken, err = getCsrfTokenFromFlowHttpResponse(response)
+	if err != nil {
+		slog.Error(err.Error())
+		return
+	}
+
+	// browser flowでは、kartosから受け取ったcookieをそのままブラウザへ返却する
+	setCookie(c, response)
+
+	// flowの情報に従ってレンダリング
+	c.HTML(http.StatusOK, "settings/_profile_form.html", gin.H{
+		"Title":          "Profile",
+		"SettingsFlowID": settingsFlow.Id,
+		"CsrfToken":      csrfToken,
+		"Session":        session,
+	})
+}
+
+func handlePostSettingsProfileForm(c *gin.Context) {
+	cookie := c.Request.Header.Get("Cookie") // browser flowでは、ブラウザのcookieをそのままkratosへ受け渡す
+	flowID := c.Query("flow")
+	nickname := c.PostForm("nickname")
+	birthdate := c.PostForm("birthdate")
+	csrfToken := c.PostForm("csrf_token")
+
+	slog.Info("Params", "FlowID", flowID, "Nickname", nickname, "Birthdate", birthdate, "CsrfToken", csrfToken, "cookie", cookie)
+
+	var email string
+
+	session, _, err := toSession(cookie)
+	slog.Info(fmt.Sprintf("%v", session))
+	jst, err := time.LoadLocation("Asia/Tokyo")
+	if err != nil {
+		panic(err)
+	}
+	authenticateAt := session.AuthenticatedAt.In(jst)
+	slog.Info(fmt.Sprintf("%v", authenticateAt))
+	slog.Info(fmt.Sprintf("%v", time.Now().Add(time.Minute*10)))
+	if authenticateAt.Before(time.Now().Add(time.Minute * 10)) {
+		c.Writer.Header().Set("HX-Redirect", fmt.Sprintf("%s/login?return_to=%s", generalEndpoint, "/settings/profile_edit?flow="+flowID))
+		c.Status(200)
+	}
+
+	if err == nil {
+		email = session.Identity.Traits.(map[string]interface{})["email"].(string)
+	}
+
+	if nickname == "" && session.Identity.Traits.(map[string]interface{})["nickname"] != nil {
+		nickname = session.Identity.Traits.(map[string]interface{})["nickname"].(string)
+	}
+
+	if birthdate == "" && session.Identity.Traits.(map[string]interface{})["birthdate"] != nil {
+		birthdate = session.Identity.Traits.(map[string]interface{})["birthdate"].(string)
+	}
+
+	// Settings Flow の送信(完了)
+	updateSettingsFlowBody := kratosclientgo.UpdateSettingsFlowBody{
+		UpdateSettingsFlowWithProfileMethod: &kratosclientgo.UpdateSettingsFlowWithProfileMethod{
+			Method: "profile",
+			Traits: map[string]interface{}{
+				"email":     email,
+				"nickname":  nickname,
+				"birthdate": birthdate,
+			},
+			CsrfToken: &csrfToken,
+		},
+	}
+	successfulSettings, response, err := kratosPublicClient.FrontendApi.
+		UpdateSettingsFlow(c).
+		Flow(flowID).
+		Cookie(cookie).
+		UpdateSettingsFlowBody(updateSettingsFlowBody).
+		Execute()
+	if err != nil {
+		slog.Error("Update Settings Flow Error", "Response", response, "Error", err)
+		c.HTML(http.StatusOK, "settings/_profile_form.html", gin.H{
+			"Title":        "Settings",
+			"ErrorMessage": "Sorry, something went wrong. Please try again later.",
+		})
+		return
+	}
+	slog.Info("UpdateRegisration Succeed", "SuccessfulSettings", successfulSettings, "Response", response)
+
+	// browser flowでは、kartosから受け取ったcookieをそのままブラウザへ返却する
+	setCookie(c, response)
+
+	// Settings flow成功時はVerification flowへリダイレクト
+	c.Writer.Header().Set("HX-Redirect", fmt.Sprintf("%s/", generalEndpoint))
+	c.Status(200)
+}
+
 // Home画面（ログイン必須）レンダリング
 func handleGetHome(c *gin.Context) {
 	// browser flowでは、ブラウザのcookieをそのままkratosへ受け渡す
 	cookie := c.Request.Header.Get("Cookie")
 
 	session, response, err := toSession(cookie)
-	if err != nil {
-		// 未認証の場合はログイン画面へリダイレクト
-		if response.StatusCode == http.StatusUnauthorized {
-			setCookie(c, response)
-			c.Redirect(303, fmt.Sprintf("%s/login", generalEndpoint))
-		} else {
-			slog.Error("ToSession Error", "Response", response, "Error", err)
-			c.HTML(http.StatusOK, "home/_form.html", gin.H{
-				"Title":        "Login",
-				"ErrorMessage": "Sorry, something went wrong. Please try again later.",
-			})
-		}
+	if err != nil && response.StatusCode != http.StatusUnauthorized {
+		slog.Error("ToSession Error", "Response", response, "Error", err)
+		c.HTML(http.StatusOK, "home/_form.html", gin.H{
+			"Title":        "Login",
+			"ErrorMessage": "Sorry, something went wrong. Please try again later.",
+		})
 		return
 	}
-	slog.Info("ToSession Succeed", "Session", session, "Response", response)
+	slog.Info("ToSession Result", "Session", session, "Response", response)
 
 	// browser flowでは、kartosから受け取ったcookieをそのままブラウザへ返却する
 	setCookie(c, response)
@@ -695,48 +1039,48 @@ func handleGetHome(c *gin.Context) {
 	})
 }
 
-// My menuのレンダリング
-func handleGetMyMenu(c *gin.Context) {
-	var err error
+// // My menuのレンダリング
+// func handleGetMyMenu(c *gin.Context) {
+// 	var err error
 
-	cookie := c.Request.Header.Get("Cookie") // browser flowでは、ブラウザのcookieをそのままkratosへ受け渡す
+// 	cookie := c.Request.Header.Get("Cookie") // browser flowでは、ブラウザのcookieをそのままkratosへ受け渡す
 
-	session, response, err := toSession(cookie)
-	if err != nil {
-		// 未認証の場合はログイン画面へリダイレクト
-		if response.StatusCode == http.StatusUnauthorized {
-			c.Writer.Header().Set("HX-Redirect", fmt.Sprintf("%s/login", generalEndpoint))
-			c.Status(200)
-		} else {
-			slog.Error("ToSession Error", "Response", response, "Error", err)
-			c.HTML(http.StatusOK, "my/_menu.html", gin.H{
-				"Title":        "Login",
-				"ErrorMessage": "Sorry, something went wrong. Please try again later.",
-			})
-		}
-		return
-	}
+// 	session, response, err := toSession(cookie)
+// 	if err != nil {
+// 		// 未認証の場合はログイン画面へリダイレクト
+// 		if response.StatusCode == http.StatusUnauthorized {
+// 			c.Writer.Header().Set("HX-Redirect", fmt.Sprintf("%s/login", generalEndpoint))
+// 			c.Status(200)
+// 		} else {
+// 			slog.Error("ToSession Error", "Response", response, "Error", err)
+// 			c.HTML(http.StatusOK, "my/_menu.html", gin.H{
+// 				"Title":        "Login",
+// 				"ErrorMessage": "Sorry, something went wrong. Please try again later.",
+// 			})
+// 		}
+// 		return
+// 	}
 
-	var logoutFlow *kratosclientgo.LogoutFlow
-	logoutFlow, response, err = kratosPublicClient.FrontendApi.
-		CreateBrowserLogoutFlow(c).
-		Cookie(cookie).
-		Execute()
-	if err != nil {
-		slog.Error("CreateLogoutFlow Error", "LogoutFlow", logoutFlow, "Response", response, "Error", err)
-		c.Writer.Header().Set("HX-Redirect", fmt.Sprintf("%s/login", generalEndpoint))
-		c.Status(200)
-		return
-	}
+// 	var logoutFlow *kratosclientgo.LogoutFlow
+// 	logoutFlow, response, err = kratosPublicClient.FrontendApi.
+// 		CreateBrowserLogoutFlow(c).
+// 		Cookie(cookie).
+// 		Execute()
+// 	if err != nil {
+// 		slog.Error("CreateLogoutFlow Error", "LogoutFlow", logoutFlow, "Response", response, "Error", err)
+// 		c.Writer.Header().Set("HX-Redirect", fmt.Sprintf("%s/login", generalEndpoint))
+// 		c.Status(200)
+// 		return
+// 	}
 
-	// browser flowでは、kartosから受け取ったcookieをそのままブラウザへ返却する
-	setCookie(c, response)
+// 	// browser flowでは、kartosから受け取ったcookieをそのままブラウザへ返却する
+// 	setCookie(c, response)
 
-	c.HTML(http.StatusOK, "my/_menu.html", gin.H{
-		"Session":     session,
-		"LogoutToken": logoutFlow.LogoutToken,
-	})
-}
+// 	c.HTML(http.StatusOK, "my/_menu.html", gin.H{
+// 		"Session":     session,
+// 		"LogoutToken": logoutFlow.LogoutToken,
+// 	})
+// }
 
 func toSession(cookie string) (*kratosclientgo.Session, *http.Response, error) {
 	session, response, err := kratosPublicClient.FrontendApi.
@@ -746,5 +1090,6 @@ func toSession(cookie string) (*kratosclientgo.Session, *http.Response, error) {
 	if err != nil {
 		slog.Error("ToSession Error", "Response", response, "Error", err)
 	}
+
 	return session, response, err
 }

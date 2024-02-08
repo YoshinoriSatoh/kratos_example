@@ -1,12 +1,16 @@
 {{define "layout/_header.html"}}
 <!DOCTYPE html>
-<html lant="ja">
+<html lant="ja" data-theme="light">
   <head>
     <title>{{.Title}}</title>
     <script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" crossorigin="anonymous"></script>
     <script src="https://unpkg.com/htmx.org/dist/ext/debug.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.6.1/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
     <meta name="htmx-config" content='{"withCredentials":"true"}'>
   </head>
 <body>
-  <h1>kratos sample</h1>
+  <main class="container">
+    {{template "layout/_navbar.html" .}}
+    <div class="container px-8">
 {{end}}

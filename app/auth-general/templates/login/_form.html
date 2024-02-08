@@ -1,37 +1,52 @@
 {{define "login/_form.html"}}
 <form 
   id="login-form"
-  hx-post="/login/form?flow={{.LoginFlowID}}" 
+  hx-post="/login/form?flow={{.LoginFlowID}}&return_to={{.ReturnTo}}" 
   hx-swap="outerHTML" 
   hx-target="this"
+  class="mb-4"
 >
   <input
     name="csrf_token"
     type="hidden"
     value="{{.CsrfToken}}"
   />
-  <div>
-    <label>Email Address</label>
-    <input 
-      id="email"
-      name="identifier" 
-      type="email"
-      required
-      value="yoshinori.satoh.tokyo@gmail.com"
-    >
+
+  <div class="mt-2 mb-4">
+    <label class="form-control w-full max-w-xs">
+      <div class="label">
+        <span class="label-text">Email Address</span>
+      </div>
+      <input 
+        id="email"
+        name="identifier" 
+        type="email"
+        required
+        value="yoshinori.satoh.tokyo@gmail.com"
+        class="input input-bordered w-full max-w-xs"
+      >
+    </label>
+
+    <label class="form-control w-full max-w-xs">
+      <div class="label">
+        <span class="label-text">Password</span>
+      </div>
+      <input 
+        id="password"
+        type="password" 
+        name="password" 
+        value="Overwatch2024!@"
+        class="input input-bordered w-full max-w-xs"
+      >
+    </label>
   </div>
-  <div>
-    <label>Password</label>
-    <input 
-      type="password" 
-      name="password" 
-      required
-      value="Overwatch2024!@"
-    >
+
+  <div class="mx-auto text-center">
+    <button class="btn btn-outline btn-primary">Login</button>
   </div>
-  <button>Login</button>
+
   {{ if ne .ErrorMessage "" }}
-    <div>{{.ErrorMessage}}</div>
+    <div class="alert alert-error mt-4">{{.ErrorMessage}}</div>
   {{end}}
 </form> 
 {{end}}

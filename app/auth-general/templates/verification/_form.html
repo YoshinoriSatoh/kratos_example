@@ -10,13 +10,28 @@
     type="hidden"
     value="{{.CsrfToken}}"
   />
-  <div>
-    <label>Verification code</label>
-    <input name="code" required min="6" max="6">
+
+  <div class="mt-2 mb-4">
+    <label class="form-control w-full max-w-xs">
+      <div class="label">
+        <span class="label-text">Verification code</span>
+      </div>
+      <input 
+        name="code" 
+        required 
+        min="6" 
+        max="6" 
+        class="input input-bordered w-full max-w-xs"
+      >
+    </label>
   </div>
-  <button>Verification</button>
+
+  <div class="mx-auto text-center">
+    <button class="btn btn-outline btn-primary">Verification</button>
+  </div>
+  
   {{ if ne .ErrorMessage "" }}
-    <div>{{.ErrorMessage}}</div>
+    <div class="alert alert-error mt-4">{{.ErrorMessage}}</div>
     <a href="/verification">Restart verification flow</a>
   {{end}}
 </form>

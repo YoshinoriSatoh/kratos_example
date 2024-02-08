@@ -1,11 +1,12 @@
 {{define "login/index.html"}}
-{{template "layout/_header.html" .}}
+{{template "layout/_header_auth.html" .}}
 
-<h2>{{.Title}}</h2>
+<h2 class="text-xl text-center mb-2">{{.Title}}</h2>
 {{template "login/_form.html" .}}
 
-<!-- <a hx-get="/recovery" hx-swap="outerHTML" hx-target="this" hx-push-url="true" >Forget password</a> -->
-<a href="/recovery">Forget password</a> 
+<div>
+  <a class="link text-blue-500" href="/recovery">Forget password</a> 
+</div>
 
 {{template "layout/_footer.html" .}}
 {{end}}

@@ -23,7 +23,7 @@ serve:
 selfservice:
   default_browser_return_url: http://localhost:8100/app/sample/auth/login
   allowed_return_urls:
-    - http://localhost:8100/app/sample/home
+    - http://localhost:8100/app/sample/
     - http://localhost:8100/app/sample/auth
     - http://localhost:8100/app/sample/auth/login
     - http://localhost:8100/app/sample/auth/registration/after
@@ -62,7 +62,7 @@ selfservice:
         hooks:
           - hook: require_verified_address
         password:
-          default_browser_return_url: http://localhost:8100/app/sample/home
+          default_browser_return_url: http://localhost:8100/app/sample/
     logout:
       after:
         default_browser_return_url: http://localhost:8100/app/sample/auth/login

@@ -1,7 +1,7 @@
 {{define "registration/index.html"}}
-{{template "layout/_header.html" .}}
+{{template "layout/_header_auth.html" .}}
 
-<h2>{{.Title}}</h2>
+<h2 class="text-xl text-center mb-2">{{.Title}}</h2>
 {{template "registration/_form.html" .}}
   
 {{template "layout/_footer.html" .}}
