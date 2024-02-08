@@ -1,15 +1,5 @@
 {{define "home/index.html"}}
 {{template "layout/_header.html" .}}
 
-<h2>{{.Title}}</h2>
-
-<div>
-  <a hx-get="/my/menu" hx-swap="outerHTML" hx-target="this" >My menu</a>
-</div>
-
-{{ if ne .ErrorMessage "" }}
-<div>{{.ErrorMessage}}</div>
-{{end}}
-
 {{template "layout/_footer.html" .}}
 {{end}}

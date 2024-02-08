@@ -23,7 +23,7 @@ serve:
 selfservice:
   default_browser_return_url: http://localhost:3000/login
   allowed_return_urls:
-    - http://localhost:3000/home
+    - http://localhost:3000/
     - http://localhost:3000/login
     - http://localhost:3000/registration/after
   methods:
@@ -54,7 +54,8 @@ selfservice:
       ui_url: http://localhost:3000/recovery
       use: code 
     settings:
-      ui_url: http://localhost:3000/settings
+      ui_url: http://localhost:3000/settings/password
+      privileged_session_max_age: 10m
       required_aal: aal1
     login:
       ui_url: http://localhost:3000/login
@@ -62,10 +63,10 @@ selfservice:
         hooks:
           - hook: require_verified_address
         password:
-          default_browser_return_url: http://localhost:3000/home
+          default_browser_return_url: http://localhost:3000/
     logout:
       after:
-        default_browser_return_url: http://localhost:3000/login
+        default_browser_return_url: http://localhost:3000/
     error:
       ui_url: http://localhost:3000/error
 
