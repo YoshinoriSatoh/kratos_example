@@ -12,9 +12,9 @@
   />
 
   <div class="mt-2 mb-4">
-    <label class="form-control w-full max-w-xs">
+    <label class="form-control">
       <div class="label">
-        <span class="label-text">Email Address</span>
+        <span class="label-text">メールアドレス</span>
       </div>
       <input 
         id="email"
@@ -22,20 +22,20 @@
         type="email"
         required
         value="yoshinori.satoh.tokyo@gmail.com"
-        class="input input-bordered w-full max-w-xs"
+        class="input input-bordered"
       >
     </label>
 
-    <label class="form-control w-full max-w-xs">
+    <label class="form-control">
       <div class="label">
-        <span class="label-text">Password</span>
+        <span class="label-text">パスワード</span>
       </div>
       <input 
         id="password"
         type="password" 
         name="password" 
         value="Overwatch2024!@"
-        class="input input-bordered w-full max-w-xs"
+        class="input input-bordered"
         onkeyup="this.setCustomValidity('')"
         hx-on:htmx:validation:validate="
           if(this.value != document.getElementById('password-confirmation').value) {
@@ -46,23 +46,23 @@
       >
     </label>
 
-    <label class="form-control w-full max-w-xs">
+    <label class="form-control">
       <div class="label">
-        <span class="label-text">Password confirmation</span>
+        <span class="label-text">パスワード確認</span>
       </div>
       <input 
         id="password-confirmation"
         type="password" 
         name="password-confirmation" 
         value="Overwatch2024!@"
-        class="input input-bordered w-full max-w-xs"
+        class="input input-bordered"
         onkeyup="this.setCustomValidity('')"
       >
     </label>
   </div>
 
   <div class="mx-auto text-center">
-    <button class="btn btn-outline btn-primary">Registration</button>
+    <button class="btn btn-primary btn-wide">次へ</button>
   </div>
 
   {{template "_alert.html" . }}

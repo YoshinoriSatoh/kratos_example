@@ -19,27 +19,24 @@
   />
 
   <div class="mt-2 mb-4">
-    <label class="form-control w-full max-w-xs">
+    <label class="form-control">
       <div class="label">
-        <span class="label-text">Verification code</span>
+        <span class="label-text">検証コード</span>
       </div>
       <input 
         name="code" 
         required 
         min="6" 
         max="6" 
-        class="input input-bordered w-full max-w-xs"
+        class="input input-bordered"
       >
     </label>
   </div>
 
   <div class="mx-auto text-center">
-    <button class="btn btn-outline btn-primary">Verification</button>
+    <button class="btn btn-primary btn-wide">送信</button>
   </div>
-  
-  <div class="mt-4">
-    <a class="link" href="/verification">Restart verification flow</a>
-  </div>
+
 
   {{ template "_alert.html" }}
 </form>

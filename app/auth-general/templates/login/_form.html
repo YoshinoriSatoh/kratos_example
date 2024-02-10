@@ -1,4 +1,12 @@
 {{define "login/_form.html"}}
+{{ if }}
+<div class="alert alert-info mt-2">
+  <div>
+    <div>アカウント検証メールが送信されました。</div>
+    <div>メールに記載されている6桁の検証コードを入力してください。 </div>
+    <a class="link" href="http://localhost:4436" target="_blank">localhostのメールサーバはこちら</a>
+  </div>
+</div>
 <form 
   id="login-form"
   hx-post="/login?flow={{.LoginFlowID}}&return_to={{.ReturnTo}}" 
@@ -13,9 +21,9 @@
   />
 
   <div class="mt-2 mb-4">
-    <label class="form-control w-full max-w-xs">
+    <label class="form-control">
       <div class="label">
-        <span class="label-text">Email Address</span>
+        <span class="label-text">メールアドレス</span>
       </div>
       <input 
         id="email"
@@ -23,26 +31,26 @@
         type="email"
         required
         value="yoshinori.satoh.tokyo@gmail.com"
-        class="input input-bordered w-full max-w-xs"
+        class="input input-bordered"
       >
     </label>
 
-    <label class="form-control w-full max-w-xs">
+    <label class="form-control">
       <div class="label">
-        <span class="label-text">Password</span>
+        <span class="label-text">パスワード</span>
       </div>
       <input 
         id="password"
         type="password" 
         name="password" 
         value="Overwatch2024!@"
-        class="input input-bordered w-full max-w-xs"
+        class="input input-bordered"
       >
     </label>
   </div>
 
   <div class="mx-auto text-center">
-    <button class="btn btn-outline btn-primary">Login</button>
+    <button class="btn btn-primary btn-wide">ログイン</button>
   </div>
 
   {{ template "_alert.html"}}

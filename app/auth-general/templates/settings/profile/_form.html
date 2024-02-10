@@ -11,33 +11,36 @@
     value="{{.CsrfToken}}"
   />
   <div class="mt-2 mb-4">
-    <label class="form-control w-full max-w-xs">
+    <label class="form-control">
       <div class="label">
-        <span class="label-text">Nickname</span>
+        <span class="label-text">ニックネーム(必須)</span>
       </div>
       <input 
         id="nickname"
         name="nickname" 
         value="{{.Nickname}}"
-        class="input input-bordered w-full max-w-xs"
+        class="input input-bordered"
       />
+      <div class="text-red-500 text-xs">{{.ValidationError.Nickname}}</div>
     </label>
 
-    <label class="form-control w-full max-w-xs">
+    <label class="form-control">
       <div class="label">
-        <span class="label-text">Birthdate</span>
+        <span class="label-text">生年月日(必須)</span>
       </div>
       <input 
         id="birthdate"
         name="birthdate" 
+        type="date"
         value="{{.Birthdate}}"
-        class="input input-bordered w-full max-w-xs"
+        class="input input-bordered"
       />
+      <div class="text-red-500 text-xs">{{.ValidationError.Birthdate}}</div>
     </label>
   </div>
 
   <div class="mx-auto text-center">
-    <button class="btn btn-outline btn-primary">Save</button>
+    <button class="btn btn-primary btn-wide">保存</button>
   </div>
 
   {{ template "_alert.html"}}

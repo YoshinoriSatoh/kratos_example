@@ -1,18 +1,21 @@
 {{define "settings/password/index.html"}}
-{{template "layout/_header_auth.html" .}}
+{{template "layout/_header.html" .}}
 
-<h2 class="text-xl text-center mb-2">{{.Title}}</h2>
+<div class="container mx-auto px-24">
+  <h2 class="text-lg text-center font-bold">パスワード設定</h2>
 
-{{ if eq .RedirectFromRecovery true }}
-<div class="alert alert-info mt-2">
-  <div>
-    <div>アカウントが復旧されました。</div>
-    <div>パスワードを再設定してください。 </div>
+  {{ if eq .RedirectFromRecovery true }}
+  <div class="alert alert-info mt-2">
+    <div>
+      <div>アカウントが復旧されました。</div>
+      <div>パスワードを再設定してください。 </div>
+    </div>
   </div>
+  {{ end }}
+  
+  {{template "settings/password/_form.html" .}}
 </div>
-{{ end }}
 
-{{template "settings/password/_form.html" .}}
   
 {{template "layout/_footer.html" .}}
 {{end}}

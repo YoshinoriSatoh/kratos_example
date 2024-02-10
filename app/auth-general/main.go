@@ -47,7 +47,7 @@ func main() {
 	e.Static("/static", "./static")
 
 	e.Use(getKratosSession())
-	e.GET("/error/unauthorized", handleGetErrorUnauthorized)
+	e.Use(redirectIfExistsTraitsFieldsNotFilledIn())
 
 	e.GET("/public/health", func(c *gin.Context) {
 		c.Status(http.StatusOK)
@@ -85,6 +85,7 @@ func main() {
 	settingsRoute.POST("/profile", handlePostSettingsProfile)
 
 	e.GET("/", handleGetHome)
+	e.GET("/item/:id", handleGetItemDetail)
 
 	e.Run(":3000")
 }

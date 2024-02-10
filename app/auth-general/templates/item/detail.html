@@ -1,0 +1,38 @@
+{{define "item/detail.html"}}
+{{template "layout/_header.html" .}}
+
+<div class="container my-4"></div>
+  <div class="grid grid-cols-12">
+    <div class="container col-span-8">
+      <img src="https://daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.jpg" alt="Burger" />
+    </div>
+    <div class="container col-span-4 ml-8">
+      <div class="mb-2 text-2xl">タイトル</div>
+      <div class="mb-2 text-2xl">¥6,500</div>
+      <div class="mb-4"><button class="btn btn-accent">購入</button></div>
+      <div class="mb-4 container">
+        <div class="my-4 text-xl text-gray-400">商品の説明</div>
+        <div class="text-sm">
+          <pre>
+xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+
+xxxxxxxxxxxxxxxx
+          </pre>
+        </div>
+      </div>
+    </div>
+  </div> 
+</div>
+
+{{template "layout/_footer.html" .}}
+{{end}}

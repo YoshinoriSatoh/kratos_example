@@ -1,10 +1,14 @@
 {{define "verification/code.html"}}
-{{template "layout/_header_auth.html" .}}
+{{template "layout/_header.html" .}}
 
-<h2 class="text-xl text-center mb-2">{{.Title}}</h2>
-
-    
-{{template "verification/_code_form.html" .}}
+<div class="container mx-auto px-24">
+  <h2 class="text-lg text-center font-bold">検証コードを入力してください</h2>
+  {{template "verification/_code_form.html" .}}
+  
+  <div class="text-right">
+    <a class="link text-blue-500 text-sm" href="/verification">検証コードを再送</a> 
+  </div>
+</div>
 
 {{template "layout/_footer.html" .}}
 {{end}}

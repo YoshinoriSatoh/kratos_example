@@ -4,6 +4,7 @@ go 1.21.6
 
 require (
 	github.com/gin-gonic/gin v1.9.1
+	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/ory/kratos-client-go v1.0.0
 )
 

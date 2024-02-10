@@ -1,6 +1,6 @@
 {{define "layout/_header.html"}}
 <!DOCTYPE html>
-<html lant="ja" data-theme="light">
+<html lant="ja" data-theme="business">
   <head>
     <title>{{.Title}}</title>
     <script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" crossorigin="anonymous"></script>
@@ -10,7 +10,7 @@
     <meta name="htmx-config" content='{"withCredentials":"true"}'>
   </head>
 <body>
-  <main class="container">
+  <main>
     {{template "layout/_navbar.html" .}}
-    <div class="container px-8">
+    <div class="divider mt-1 h-px"></div> 
 {{end}}

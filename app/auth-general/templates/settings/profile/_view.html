@@ -7,26 +7,34 @@
       hx-swap="outerHTML" 
       hx-target="#settings-form"
       class="btn btn-outline btn-primary"
-    >Edit</button>
+    >プロフィール編集</button>
   </div>
 
   <div class="mt-2 mb-4">
-    <label class="form-control w-full max-w-xs">
+    <label class="form-control">
       <div class="label">
-        <span class="label-text">Nickname</span>
+        <span class="label-text">ニックネーム</span>
       </div>
-      <div>
-        {{.Nickname}}
-      </div>
+      <input 
+        id="nickname"
+        name="nickname" 
+        value="{{.Nickname}}"
+        class="input input-bordered"
+        disabled
+      />
     </label>
 
-    <label class="form-control w-full max-w-xs">
+    <label class="form-control">
       <div class="label">
-        <span class="label-text">Birthdate</span>
+        <span class="label-text">生年月日</span>
       </div>
-      <div>
-        {{.Birthdate}}
-      </div>
+      <input 
+        id="birthdate"
+        name="birthdate" 
+        value="{{.Birthdate}}"
+        class="input input-bordered"
+        disabled
+      />
     </label>
   </div>
 

@@ -50,6 +50,29 @@ func ToSession(i ToSessionInput) (ToSessionOutput, error) {
 	return output, nil
 }
 
+// ------------------------- Traits -------------------------
+func getValueFromTraits(traits map[string]interface{}, key string) string {
+	if traits[key] == nil {
+		return ""
+	}
+	email, ok := traits[key].(string)
+	if !ok {
+		email = ""
+	}
+	return email
+}
+
+func existsTraitsFieldsNotFilledIn(session *kratosclientgo.Session) bool {
+	traits := session.Identity.Traits.(map[string]interface{})
+	if getValueFromTraits(traits, "email") == "" ||
+		getValueFromTraits(traits, "nickname") == "" ||
+		getValueFromTraits(traits, "birthdate") == "" {
+		return true
+	} else {
+		return false
+	}
+}
+
 // ------------------------- Registration Flow -------------------------
 type CreateOrGetRegistrationFlowInput struct {
 	Cookie string

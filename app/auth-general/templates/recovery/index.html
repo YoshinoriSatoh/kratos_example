@@ -1,8 +1,10 @@
 {{define "recovery/index.html"}}
-{{template "layout/_header_auth.html" .}}
+{{template "layout/_header.html" .}}
 
-<h2 class="text-xl text-center mb-2">{{.Title}}</h2>
+<div class="container mx-auto px-24">
+  <h2 class="text-lg text-center font-bold">アカウント復旧</h2>
 {{template "recovery/_email_form.html" .}}
+</div>
 
 {{template "layout/_footer.html" .}}
 {{end}}

@@ -11,10 +11,11 @@ import (
 )
 
 func ViewParameters(c *gin.Context, p gin.H) gin.H {
-	merged := p
-	merged["IsAuthenticated"] = IsAuthenticated(c)
-	merged["Navbar"] = getNavbarViewParameters(c)
-	return merged
+	params := p
+	params["IsAuthenticated"] = IsAuthenticated(c)
+	params["Navbar"] = getNavbarViewParameters(c)
+	params["Path"] = c.Request.URL.Path
+	return params
 }
 
 func getNavbarViewParameters(c *gin.Context) gin.H {
@@ -68,8 +69,9 @@ func mergeSettingsProfileEditViewParams(params settingsProfileEditViewParams, se
 func loadSettingsProfileEditParamsFromCookie(c *gin.Context) (settingsProfileEditViewParams, error) {
 	editSettingParamStr, err := c.Cookie(SETTINGS_PROFILE_EDIT_VIEW_PARAMS_COOKIE_KEY)
 	if err != nil {
-		slog.Error(err.Error())
-		return settingsProfileEditViewParams{}, err
+		// Cookieがない場合にエラーとはしない
+		slog.Info(err.Error())
+		return settingsProfileEditViewParams{}, nil
 	}
 	editSettingParams, err := base64.URLEncoding.DecodeString(editSettingParamStr)
 	if err != nil {

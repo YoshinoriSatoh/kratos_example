@@ -1,0 +1,11 @@
+{{define "item/_card.html"}}
+<a href="{{.Link}}">
+  <div class="card min-w-36 bg-base-100 shadow-xl">
+    <figure><img src="{{.Image}}" /></figure>
+    <div class="card-body">
+      <h2 class="card-title">{{.Name}}</h2>
+      <p>{{.Description}}</p>
+    </div>
+  </div>
+</a>
+{{end}}

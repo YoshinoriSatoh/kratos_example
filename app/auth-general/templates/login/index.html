@@ -1,12 +1,18 @@
 {{define "login/index.html"}}
-{{template "layout/_header_auth.html" .}}
+{{template "layout/_header.html" .}}
 
-<h2 class="text-xl text-center mb-2">{{.Title}}</h2>
-{{template "login/_form.html" .}}
+<div class="container mx-auto px-24">
+  <h2 class="text-lg text-center font-bold">ログイン</h2>
+  <div class="text-right">
+    <a class="link text-blue-500 text-sm" href="/registration">会員登録はこちら</a> 
+  </div>
+  {{template "login/_form.html" .}}
 
-<div>
-  <a class="link text-blue-500" href="/recovery">Forget password</a> 
+  <div class="text-right">
+    <a class="link text-blue-500 text-sm" href="/recovery">パスワードを忘れた場合はこちら</a> 
+  </div>
 </div>
 
 {{template "layout/_footer.html" .}}
+
 {{end}}

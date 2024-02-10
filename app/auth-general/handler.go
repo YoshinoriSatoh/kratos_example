@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"slices"
 
 	"github.com/gin-gonic/gin"
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
 func getKratosSession() gin.HandlerFunc {
@@ -20,6 +22,20 @@ func getKratosSession() gin.HandlerFunc {
 		c.Set("session", output.Session)
 
 		c.Next()
+	}
+}
+
+func redirectIfExistsTraitsFieldsNotFilledIn() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		session := GetSession(c)
+		targetPaths := []string{"/settings/profile/edit", "/login"}
+		if IsAuthenticated(c) &&
+			existsTraitsFieldsNotFilledIn(session) &&
+			!slices.Contains(targetPaths, c.Request.URL.Path) {
+			c.Redirect(303, fmt.Sprintf("%s/settings/profile/edit", generalEndpoint))
+		} else {
+			c.Next()
+		}
 	}
 }
 
@@ -40,11 +56,6 @@ func setCookieToResponseHeader(c *gin.Context, cookies []string) {
 	for _, cookie := range cookies {
 		c.Writer.Header().Add("Set-Cookie", cookie)
 	}
-}
-
-// Handler GET /error/unauthorized
-func handleGetErrorUnauthorized(c *gin.Context) {
-	c.HTML(http.StatusOK, "error/unauthorized.html", ViewParameters(c, gin.H{}))
 }
 
 // Handler GET /registration
@@ -318,7 +329,9 @@ func handlePostLogin(c *gin.Context) {
 	// kratosのcookieをそのままブラウザへ受け渡す
 	setCookieToResponseHeader(c, output.Cookies)
 
-	// Login flow成功時はホーム画面へリダイレクト
+	// Login flow成功時:
+	//   Traitsに設定させたい項目がまだ未設定の場合、Settings(profile)へリダイレクト
+	//   はホーム画面へリダイレクト
 	returnTo := c.Query("return_to")
 	if returnTo != "" {
 		c.Writer.Header().Set("HX-Redirect", returnTo)
@@ -556,7 +569,12 @@ func handleGetSettingsProfileEdit(c *gin.Context) {
 
 	// セッションが privileged_session_max_age を過ぎていた場合、ログイン画面へリダイレクト（再ログインの強制）
 	if NeedLoginWhenPrivilegedAccess(c) {
-		c.Writer.Header().Set("HX-Redirect", fmt.Sprintf("%s/login?return_to=%s", generalEndpoint, "/settings/profile/edit?flow="+output.FlowID))
+		redirectTo := fmt.Sprintf("%s/login?return_to=%s", generalEndpoint, "/settings/profile/edit?flow="+output.FlowID)
+		if c.Request.Header.Get("HX-Request") == "true" {
+			c.Writer.Header().Set("HX-Redirect", redirectTo)
+		} else {
+			c.Redirect(303, redirectTo)
+		}
 		c.Status(200)
 		return
 	}
@@ -571,11 +589,18 @@ func handleGetSettingsProfileEdit(c *gin.Context) {
 	}
 
 	// クッキーに編集画面のパラメータが保存されていない場合は、セッションから現在の値を取得
+	traits := session.Identity.Traits.(map[string]interface{})
+	slog.Info(fmt.Sprintf("%v", traits))
 	if params.Nickname == "" {
-		params.Nickname = session.Identity.Traits.(map[string]interface{})["nickname"].(string)
+		params.Nickname = getValueFromTraits(traits, "nickname")
 	}
 	if params.Birthdate == "" {
-		params.Birthdate = session.Identity.Traits.(map[string]interface{})["birthdate"].(string)
+		params.Nickname = getValueFromTraits(traits, "birthdate")
+	}
+
+	var information string
+	if existsTraitsFieldsNotFilledIn(session) {
+		information = "プロフィールの入力をお願いします"
 	}
 
 	c.HTML(http.StatusOK, "settings/profile/edit.html", ViewParameters(c, gin.H{
@@ -584,6 +609,7 @@ func handleGetSettingsProfileEdit(c *gin.Context) {
 		"CsrfToken":      output.CsrfToken,
 		"Nickname":       params.Nickname,
 		"Birthdate":      params.Birthdate,
+		"Infomation":     information,
 	}))
 }
 
@@ -628,15 +654,56 @@ func handleGetSettingsProfileForm(c *gin.Context) {
 }
 
 // Handler POST /settings/profile
+type handlePostSettingsProfileRequestPostForm struct {
+	Nickname  string
+	Birthdate string
+}
+
+func (f handlePostSettingsProfileRequestPostForm) Validate() error {
+	return validation.ValidateStruct(&f,
+		validation.Field(&f.Nickname, validation.Required, validation.Length(5, 20)),
+		validation.Field(&f.Birthdate, validation.Required, validation.Date("2006-01-02")),
+	)
+}
+
 func handlePostSettingsProfile(c *gin.Context) {
 	session := GetSession(c)
 	flowID := c.Query("flow")
 	csrfToken := c.PostForm("csrf_token")
-
-	params := mergeSettingsProfileEditViewParams(settingsProfileEditViewParams{
-		Email:     c.PostForm("email"),
+	email := c.PostForm("email")
+	requestPostForm := handlePostSettingsProfileRequestPostForm{
 		Nickname:  c.PostForm("nickname"),
 		Birthdate: c.PostForm("birthdate"),
+	}
+
+	err := requestPostForm.Validate()
+	if err != nil {
+		validationErrors := make(map[string]string, 3)
+		errs := err.(validation.Errors)
+		for k, err := range errs {
+			validationErrors[k] = err.Error()
+			slog.Info(fmt.Sprintf("%v", err.(validation.Error)))
+			verr := err.(validation.Error)
+			slog.Info(verr.Error())
+			slog.Info(verr.Code())
+			slog.Info(verr.Message())
+		}
+		c.HTML(http.StatusOK, "settings/profile/_form.html", ViewParameters(c, gin.H{
+			"SettingsFlowID":  flowID,
+			"CsrfToken":       csrfToken,
+			"ErrorMessages":   []string{"Error"},
+			"Email":           email,
+			"Nickname":        requestPostForm.Nickname,
+			"Birthdate":       requestPostForm.Nickname,
+			"ValidationError": validationErrors,
+		}))
+		return
+	}
+
+	params := mergeSettingsProfileEditViewParams(settingsProfileEditViewParams{
+		Email:     email,
+		Nickname:  requestPostForm.Nickname,
+		Birthdate: requestPostForm.Birthdate,
 	}, session)
 
 	// セッションが privileged_session_max_age を過ぎていた場合、ログイン画面へリダイレクト（再ログインの強制）
@@ -688,8 +755,74 @@ func handlePostSettingsProfile(c *gin.Context) {
 }
 
 // Home画面（ログイン必須）レンダリング
+type item struct {
+	Name        string `json:"name"`
+	Image       string `json:"image"`
+	Description string `json:"description"`
+	Link        string `json:"link"`
+}
+
+var items = []item{
+	{
+		Name:        "Item1",
+		Image:       "https://daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.jpg",
+		Description: "Item1 Description",
+		Link:        "/item/1",
+	},
+	{
+		Name:        "Item2",
+		Image:       "https://daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.jpg",
+		Description: "Item1 Description",
+		Link:        "/item/1",
+	},
+	{
+		Name:        "Item3",
+		Image:       "https://daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.jpg",
+		Description: "Item1 Description",
+		Link:        "/item/1",
+	},
+	{
+		Name:        "Item3",
+		Image:       "https://daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.jpg",
+		Description: "Item1 Description",
+		Link:        "/item/1",
+	},
+	{
+		Name:        "Item3",
+		Image:       "https://daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.jpg",
+		Description: "Item1 Description",
+		Link:        "/item/1",
+	},
+	{
+		Name:        "Item3",
+		Image:       "https://daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.jpg",
+		Description: "Item1 Description",
+		Link:        "/item/1",
+	},
+	{
+		Name:        "Item3",
+		Image:       "https://daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.jpg",
+		Description: "Item1 Description",
+		Link:        "/item/1",
+	},
+	{
+		Name:        "Item3",
+		Image:       "https://daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.jpg",
+		Description: "Item1 Description",
+		Link:        "/item/1",
+	},
+}
+
 func handleGetHome(c *gin.Context) {
 	c.HTML(http.StatusOK, "home/index.html", ViewParameters(c, gin.H{
 		"Title": "Home",
+		"Items": items,
+	}))
+}
+
+func handleGetItemDetail(c *gin.Context) {
+	c.HTML(http.StatusOK, "item/detail.html", ViewParameters(c, gin.H{
+		"Title": "Home",
+		"Items": items,
 	}))
 }
