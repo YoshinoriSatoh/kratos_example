@@ -1,7 +1,7 @@
 {{define "registration/_form.html"}}
 <form 
   id="registration-form"
-  hx-post="/registration/form?flow={{.RegistrationFlowID}}" 
+  hx-post="/registration?flow={{.RegistrationFlowID}}" 
   hx-swap="outerHTML" 
   hx-target="this"
 >
@@ -65,8 +65,6 @@
     <button class="btn btn-outline btn-primary">Registration</button>
   </div>
 
-  {{ if ne .ErrorMessage "" }}
-    <div class="alert alert-error mt-4">{{.ErrorMessage}}</div>
-  {{end}}
+  {{template "_alert.html" . }}
 </form>
 {{end}}

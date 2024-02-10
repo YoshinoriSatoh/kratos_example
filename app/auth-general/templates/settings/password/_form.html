@@ -1,7 +1,7 @@
-{{define "settings/_password_form.html"}}
+{{define "settings/password/_form.html"}}
 <form 
   id="settings-form"
-  hx-post="/settings/password_form?flow={{.SettingsFlowID}}" 
+  hx-post="/settings/password?flow={{.SettingsFlowID}}" 
   hx-swap="outerHTML" 
   hx-target="this"
 >
@@ -50,8 +50,6 @@
     <button class="btn btn-outline btn-primary">Change password</button>
   </div>
 
-  {{ if ne .ErrorMessage "" }}
-    <div class="alert alert-error mt-4">{{.ErrorMessage}}</div>
-  {{end}}
+  {{ template "_alert.html"}}
 </form>
 {{end}}

@@ -1,9 +1,9 @@
-{{define "settings/_profile_view.html"}}
+{{define "settings/profile/_view.html"}}
 <div id="settings-form">
-  <div class="mx-auto text-center">
+  <div class="mx-auto">
     <button 
       id="settings-view"
-      hx-get="/settings/profile_form" 
+      hx-get="/settings/profile/_form" 
       hx-swap="outerHTML" 
       hx-target="#settings-form"
       class="btn btn-outline btn-primary"
@@ -16,7 +16,7 @@
         <span class="label-text">Nickname</span>
       </div>
       <div>
-        {{.Session.Identity.Traits.nickname}}
+        {{.Nickname}}
       </div>
     </label>
 
@@ -25,13 +25,11 @@
         <span class="label-text">Birthdate</span>
       </div>
       <div>
-        {{.Session.Identity.Traits.birthdate}}
+        {{.Birthdate}}
       </div>
     </label>
   </div>
 
-  {{ if ne .ErrorMessage "" }}
-    <div class="alert alert-error mt-4">{{.ErrorMessage}}</div>
-  {{end}}
+  {{ template "_alert.html"}}
 </div>
 {{end}}

@@ -2,14 +2,9 @@
 {{template "layout/_header_auth.html" .}}
 
 <h2 class="text-xl text-center mb-2">{{.Title}}</h2>
-<div class="alert alert-info mt-2">
-  <div>
-    <div>Please enter the verification code that was sent to your email address. </div>
-    <a class="link" href="http://localhost:4436" target="_blank">Mailslurper</a>
-  </div>
-</div>
+
     
-{{template "verification/_form.html" .}}
+{{template "verification/_email_form.html" .}}
 
 {{template "layout/_footer.html" .}}
 {{end}}

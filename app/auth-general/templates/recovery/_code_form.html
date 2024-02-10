@@ -1,7 +1,17 @@
 {{define "recovery/_code_form.html"}}
+{{ if eq .ShowRecoveryAnnouncement true }}
+<div class="alert alert-info mt-2">
+  <div>
+    <div>アカウント復旧メールが送信されました。</div>
+    <div>メールに記載されている6桁の復旧コードを入力してください。 </div>
+    <a class="link" href="http://localhost:4436" target="_blank">localhostのメールサーバはこちら</a>
+  </div>
+</div>
+{{end}}
+
 <form 
   id="recovery-form"
-  hx-post="/recovery/complete?flow={{.RecoveryFlowID}}" 
+  hx-post="/recovery/code?flow={{.RecoveryFlowID}}" 
   hx-swap="outerHTML" 
   hx-target="this"
 >
@@ -28,8 +38,6 @@
     <button class="btn btn-outline btn-primary">Send recovery code</button>
   </div>
 
-  {{ if ne .ErrorMessage nil }}
-  <div class="alert alert-error mt-4">{{.ErrorMessage}}</div>
-  {{end}}
+  {{ template "_alert.html"}}
 </form> 
 {{end}}

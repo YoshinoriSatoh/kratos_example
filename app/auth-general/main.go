@@ -1,19 +1,23 @@
 package main
 
 import (
-	"encoding/json"
-	"io"
+	"html/template"
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	kratosclientgo "github.com/ory/kratos-client-go"
 )
 
-var generalEndpoint string = "http://localhost:3000"
-var kratosPublicEndpoint string = "http://kratos-general:4433"
-var kratosPublicClient *kratosclientgo.APIClient
+var (
+	generalEndpoint              string = "http://localhost:3000"
+	kratosPublicEndpoint         string = "http://kratos-general:4433"
+	kratosPublicClient           *kratosclientgo.APIClient
+	locationJst                  *time.Location
+	privilegedAccessLimitMinutes time.Duration = 10
+)
 
 func init() {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{AddSource: true})))
@@ -21,11 +25,11 @@ func init() {
 	kratosPublicConfigration := kratosclientgo.NewConfiguration()
 	kratosPublicConfigration.Servers = []kratosclientgo.ServerConfiguration{{URL: kratosPublicEndpoint}}
 	kratosPublicClient = kratosclientgo.NewAPIClient(kratosPublicConfigration)
-}
 
-func setCookie(c *gin.Context, response *http.Response) {
-	for _, cookie := range response.Header["Set-Cookie"] {
-		c.Writer.Header().Add("Set-Cookie", cookie)
+	var err error
+	locationJst, err = time.LoadLocation("Asia/Tokyo")
+	if err != nil {
+		panic(err)
 	}
 }
 
@@ -36,8 +40,14 @@ func main() {
 	}))
 	e.Use(gin.Recovery())
 
-	e.LoadHTMLGlob("templates/**/*.html")
+	templateList := template.Must(template.New("").ParseGlob("templates/**/*.html"))
+	templateList = template.Must(templateList.ParseGlob("templates/**/**/*.html"))
+
+	e.SetHTMLTemplate(templateList)
 	e.Static("/static", "./static")
+
+	e.Use(getKratosSession())
+	e.GET("/error/unauthorized", handleGetErrorUnauthorized)
 
 	e.GET("/public/health", func(c *gin.Context) {
 		c.Status(http.StatusOK)
@@ -45,104 +55,36 @@ func main() {
 
 	// Registration
 	e.GET("/registration", handleGetRegistration)
-	e.POST("/registration/form", handlePostRegistrationForm)
+	e.POST("/registration", handlePostRegistration)
 
 	// Verification
 	e.GET("/verification", handleGetVerification)
-	e.POST("/verification/form", handlePostVerificationForm)
+	e.GET("/verification/code", handleGetVerificationCode)
+	e.POST("/verification/email", handlePostVerificationEmail)
+	e.POST("/verification/code", handlePostVerificationCode)
 
 	// Login
 	e.GET("/login", handleGetLogin)
-	e.POST("/login/form", handlePostLoginForm)
+	e.POST("/login", handlePostLogin)
 
 	// Logout
 	e.POST("/logout", handlePostLogout)
 
 	// Recovery
 	e.GET("/recovery", handleGetRecovery)
-	e.POST("/recovery/code_form", handlePostRecoveryCodeForm)
-	e.POST("/recovery/complete", completeRecoveryFlow)
+	e.POST("/recovery/email", handlePostRecoveryEmail)
+	e.POST("/recovery/code", handlePostRecoveryCode)
 
 	// Settings
-	e.GET("/settings/password", handleGetPasswordSettings)
-	e.POST("/settings/password_form", handlePostSettingsPasswordForm)
-	e.GET("/settings/profile/view", handleGetProfileSettingsView)
-	e.GET("/settings/profile/edit", handleGetProfileSettingsEdit)
-	e.GET("/settings/profile_form", handleGetProfileSettingsForm)
-	e.POST("/settings/profile_form", handlePostSettingsProfileForm)
+	settingsRoute := e.Group("/settings", requireAuthenticated())
+	settingsRoute.GET("/password", handleGetPasswordSettings)
+	settingsRoute.POST("/password", handlePostSettingsPassword)
+	settingsRoute.GET("/profile", handleGetSettingsProfile)
+	settingsRoute.GET("/profile/edit", handleGetSettingsProfileEdit)
+	settingsRoute.GET("/profile/_form", handleGetSettingsProfileForm)
+	settingsRoute.POST("/profile", handlePostSettingsProfile)
 
 	e.GET("/", handleGetHome)
 
 	e.Run(":3000")
-}
-
-// flow の ui から csrf_token を取得
-// SDKを使用しているので、本来は上記レスポンスの第一引数である registrationFlow *kratosclientgo.RegistrationFlow から取得するところだが、
-// goのv1.0.0のSDKには不具合があるらしく、仕方ないのでhttp.Responseから取得している
-// https://github.com/ory/sdk/issues/292
-func getCsrfTokenFromFlowHttpResponse(r *http.Response) (string, error) {
-	defer r.Body.Close()
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		slog.Error(err.Error())
-		return "", err
-	}
-
-	var result interface{}
-	if err := json.Unmarshal(body, &result); err != nil {
-		slog.Error("Can not unmarshal JSON")
-		return "", err
-	}
-
-	var csrfToken string
-	for _, node := range result.(map[string]interface{})["ui"].(map[string]interface{})["nodes"].([]interface{}) {
-		attrName := node.(map[string]interface{})["attributes"].(map[string]interface{})["name"]
-		if attrName != nil && attrName.(string) == "csrf_token" {
-			csrfToken = node.(map[string]interface{})["attributes"].(map[string]interface{})["value"].(string)
-			break
-		}
-	}
-	slog.Info(csrfToken)
-	return csrfToken, nil
-}
-
-func getContinueWithVerificationUiFlowIdFromFlowHttpResponse(r *http.Response) (string, error) {
-	defer r.Body.Close()
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		slog.Error(err.Error())
-		return "", err
-	}
-
-	var result interface{}
-	if err := json.Unmarshal(body, &result); err != nil {
-		slog.Error("Can not unmarshal JSON")
-		return "", err
-	}
-
-	var verificationFlowID string
-	for _, continueWith := range result.(map[string]interface{})["continue_with"].([]interface{}) {
-		if continueWith.(map[string]interface{})["action"].(string) == "show_verification_ui" {
-			verificationFlowID = continueWith.(map[string]interface{})["flow"].(map[string]interface{})["id"].(string)
-			break
-		}
-	}
-	slog.Info(verificationFlowID)
-	return verificationFlowID, nil
-}
-
-func getRedirectBrowserToFromFlowHttpResponse(r *http.Response) (string, error) {
-	defer r.Body.Close()
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		slog.Error(err.Error())
-		return "", err
-	}
-
-	var result interface{}
-	if err := json.Unmarshal(body, &result); err != nil {
-		slog.Error("Can not unmarshal JSON")
-		return "", err
-	}
-	return result.(map[string]interface{})["redirect_browser_to"].(string), nil
 }

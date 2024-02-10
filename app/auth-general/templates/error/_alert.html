@@ -1,0 +1,12 @@
+{{define "_alert.html"}}
+
+{{ if ne .ErrorMessage nil }}
+  {{ $length := len .ErrorMessages }}
+  {{ if gt $length 0 }}
+    {{ range .ErrorMessages }}
+      <div class="alert alert-error mt-4">{{.}}</div>
+    {{end}}
+  {{end}}
+{{end}}
+
+{{end}}

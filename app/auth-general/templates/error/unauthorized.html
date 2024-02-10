@@ -1,0 +1,11 @@
+{{define "error/unauthorized.html"}}
+{{template "layout/_header_auth.html" .}}
+
+<h2 class="text-xl text-center mb-2">Not Authenticated</h2>
+<div>
+  Login required.
+  <a href="/login" class="text-blue-500">please login</a> 
+</div>
+
+{{template "layout/_footer.html" .}}
+{{end}}

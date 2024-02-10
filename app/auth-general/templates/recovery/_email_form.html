@@ -1,7 +1,7 @@
 {{define "recovery/_email_form.html"}}
 <form 
   id="recovery-form"
-  hx-post="/recovery/code_form?flow={{.RecoveryFlowID}}" 
+  hx-post="/recovery/email?flow={{.RecoveryFlowID}}" 
   hx-swap="outerHTML" 
   hx-target="this"
 >
@@ -31,8 +31,6 @@
     <button class="btn btn-outline btn-primary">Recovery</button>
   </div>
 
-  {{ if ne .ErrorMessage nil }}
-  <div class="alert alert-error mt-4">{{.ErrorMessage}}</div>
-  {{end}}
+  {{ template "_alert.html"}}
 </form> 
 {{end}}

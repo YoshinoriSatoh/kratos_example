@@ -1,7 +1,7 @@
-{{define "settings/_profile_form.html"}}
+{{define "settings/profile/_form.html"}}
 <form 
   id="settings-form"
-  hx-post="/settings/profile_form?flow={{.SettingsFlowID}}" 
+  hx-post="/settings/profile?flow={{.SettingsFlowID}}" 
   hx-swap="outerHTML" 
   hx-target="this"
 >
@@ -40,8 +40,6 @@
     <button class="btn btn-outline btn-primary">Save</button>
   </div>
 
-  {{ if ne .ErrorMessage nil }}
-    <div class="alert alert-error mt-4">{{.ErrorMessage}}</div>
-  {{end}}
+  {{ template "_alert.html"}}
 </form>
 {{end}}

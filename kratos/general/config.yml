@@ -87,6 +87,13 @@ courier:
             html: file:///etc/config/kratos/templates/verification_code/valid/email.body.gotmpl
             plaintext: file:///etc/config/kratos/templates/verification_code/valid/email.body.plaintext.gotmpl
           subject: file:///etc/config/kratos/templates/verification_code/valid/email.subject.gotmpl
+    recovery_code:
+      valid:
+        email:
+          body:
+            html: file:///etc/config/kratos/templates/recovery_code/valid/email.body.gotmpl
+            plaintext: file:///etc/config/kratos/templates/recovery_code/valid/email.body.plaintext.gotmpl
+          subject: file:///etc/config/kratos/templates/recovery_code/valid/email.subject.gotmpl
 
 log:
   level: debug

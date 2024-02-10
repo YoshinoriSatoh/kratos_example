@@ -1,10 +1,10 @@
-{{define "verification/_form.html"}}
+{{define "verification/_email_form.html"}}
 <form 
-  id="verification-form" 
-  hx-post="/verification/form?flow={{.VerificationFlowID}}"
+  id="verification-form"
+  hx-post="/verification/email?flow={{.VerificationFlowID}}" 
   hx-swap="outerHTML" 
   hx-target="this"
-  > 
+>
   <input
     name="csrf_token"
     type="hidden"
@@ -14,13 +14,14 @@
   <div class="mt-2 mb-4">
     <label class="form-control w-full max-w-xs">
       <div class="label">
-        <span class="label-text">Verification code</span>
+        <span class="label-text">Email Address</span>
       </div>
       <input 
-        name="code" 
-        required 
-        min="6" 
-        max="6" 
+        id="email"
+        name="email" 
+        type="email"
+        required
+        value="yoshinori.satoh.tokyo@gmail.com"
         class="input input-bordered w-full max-w-xs"
       >
     </label>
@@ -29,10 +30,7 @@
   <div class="mx-auto text-center">
     <button class="btn btn-outline btn-primary">Verification</button>
   </div>
-  
-  {{ if ne .ErrorMessage "" }}
-    <div class="alert alert-error mt-4">{{.ErrorMessage}}</div>
-    <a href="/verification">Restart verification flow</a>
-  {{end}}
-</form>
+
+  {{ template "_alert.html"}}
+</form> 
 {{end}}

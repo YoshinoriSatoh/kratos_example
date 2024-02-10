@@ -1,7 +1,7 @@
 {{define "login/_form.html"}}
 <form 
   id="login-form"
-  hx-post="/login/form?flow={{.LoginFlowID}}&return_to={{.ReturnTo}}" 
+  hx-post="/login?flow={{.LoginFlowID}}&return_to={{.ReturnTo}}" 
   hx-swap="outerHTML" 
   hx-target="this"
   class="mb-4"
@@ -45,8 +45,6 @@
     <button class="btn btn-outline btn-primary">Login</button>
   </div>
 
-  {{ if ne .ErrorMessage "" }}
-    <div class="alert alert-error mt-4">{{.ErrorMessage}}</div>
-  {{end}}
+  {{ template "_alert.html"}}
 </form> 
 {{end}}

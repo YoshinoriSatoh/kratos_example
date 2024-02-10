@@ -1,8 +1,10 @@
-{{define "settings/password.html"}}
+{{define "verification/code.html"}}
 {{template "layout/_header_auth.html" .}}
 
 <h2 class="text-xl text-center mb-2">{{.Title}}</h2>
-{{template "settings/_password_form.html" .}}
-  
+
+    
+{{template "verification/_code_form.html" .}}
+
 {{template "layout/_footer.html" .}}
 {{end}}
