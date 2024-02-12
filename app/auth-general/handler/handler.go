@@ -1,73 +1,26 @@
-package main
+package handler
 
 import (
 	"fmt"
+	"kratos_example/kratos"
 	"log/slog"
 	"net/http"
-	"slices"
+	"net/url"
 
 	"github.com/gin-gonic/gin"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
-func getKratosSession() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		output, err := ToSession(ToSessionInput{
-			Cookie: c.Request.Header.Get("Cookie"),
-		})
-		if err != nil {
-			c.Set("session", nil)
-			return
-		}
-		c.Set("session", output.Session)
-
-		c.Next()
-	}
-}
-
-func redirectIfExistsTraitsFieldsNotFilledIn() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		session := GetSession(c)
-		targetPaths := []string{"/settings/profile/edit", "/login"}
-		if IsAuthenticated(c) &&
-			existsTraitsFieldsNotFilledIn(session) &&
-			!slices.Contains(targetPaths, c.Request.URL.Path) {
-			c.Redirect(303, fmt.Sprintf("%s/settings/profile/edit", generalEndpoint))
-		} else {
-			c.Next()
-		}
-	}
-}
-
-func requireAuthenticated() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if IsAuthenticated(c) {
-			slog.Info("Authenticated")
-			c.Next()
-		} else {
-			slog.Info("Not Authenticated")
-			// c.AbortWithStatus(http.StatusUnauthorized)
-			c.Redirect(303, fmt.Sprintf("%s/error/unauthorized", generalEndpoint))
-		}
-	}
-}
-
-func setCookieToResponseHeader(c *gin.Context, cookies []string) {
-	for _, cookie := range cookies {
-		c.Writer.Header().Add("Set-Cookie", cookie)
-	}
-}
-
 // Handler GET /registration
-func handleGetRegistration(c *gin.Context) {
+func (p *Provider) handleGetRegistration(c *gin.Context) {
 	// Registration Flow の作成 or 取得
 	// Registration flowを新規作成した場合は、FlowIDを含めてリダイレクト
-	output, err := CreateOrGetRegistrationFlow(CreateOrGetRegistrationFlowInput{
+	output, err := p.d.Kratos.CreateOrGetRegistrationFlow(kratos.CreateOrGetRegistrationFlowInput{
 		Cookie: c.Request.Header.Get("Cookie"),
 		FlowID: c.Query("flow"),
 	})
 	if err != nil {
-		c.HTML(http.StatusOK, "registration/index.html", ViewParameters(c, gin.H{
+		c.HTML(http.StatusOK, "registration/index.html", viewParameters(c, gin.H{
 			"Title":         "Registration",
 			"ErrorMessages": output.ErrorMessages,
 		}))
@@ -83,7 +36,7 @@ func handleGetRegistration(c *gin.Context) {
 	}
 
 	// flowの情報に従ってレンダリング
-	c.HTML(http.StatusOK, "registration/index.html", ViewParameters(c, gin.H{
+	c.HTML(http.StatusOK, "registration/index.html", viewParameters(c, gin.H{
 		"Title":              "Registration",
 		"RegistrationFlowID": output.FlowID,
 		"CsrfToken":          output.CsrfToken,
@@ -91,12 +44,12 @@ func handleGetRegistration(c *gin.Context) {
 }
 
 // Handler POST /registration
-func handlePostRegistration(c *gin.Context) {
+func (p *Provider) handlePostRegistration(c *gin.Context) {
 	flowID := c.Query("flow")
 	csrfToken := c.PostForm("csrf_token")
 
 	// Registration Flow 更新
-	output, err := UpdateRegistrationFlow(UpdateRegistrationFlowInput{
+	output, err := p.d.Kratos.UpdateRegistrationFlow(kratos.UpdateRegistrationFlowInput{
 		Cookie:    c.Request.Header.Get("Cookie"),
 		FlowID:    flowID,
 		Email:     c.PostForm("email"),
@@ -104,7 +57,7 @@ func handlePostRegistration(c *gin.Context) {
 		CsrfToken: csrfToken,
 	})
 	if err != nil {
-		c.HTML(http.StatusOK, "registration/_form.html", ViewParameters(c, gin.H{
+		c.HTML(http.StatusOK, "registration/_form.html", viewParameters(c, gin.H{
 			"Title":              "Registration",
 			"RegistrationFlowID": flowID,
 			"CsrfToken":          csrfToken,
@@ -122,15 +75,15 @@ func handlePostRegistration(c *gin.Context) {
 }
 
 // Handler GET /verification handler
-func handleGetVerification(c *gin.Context) {
+func (p *Provider) handleGetVerification(c *gin.Context) {
 	// Verification Flow の作成 or 取得
 	// Verification flowを新規作成した場合は、FlowIDを含めてリダイレクト
-	output, err := CreateOrGetVerificationFlow(CreateOrGetVerificationFlowInput{
+	output, err := p.d.Kratos.CreateOrGetVerificationFlow(kratos.CreateOrGetVerificationFlowInput{
 		Cookie: c.Request.Header.Get("Cookie"),
 		FlowID: c.Query("flow"),
 	})
 	if err != nil {
-		c.HTML(http.StatusOK, "verification/index.html", ViewParameters(c, gin.H{
+		c.HTML(http.StatusOK, "verification/index.html", viewParameters(c, gin.H{
 			"Title":         "Verification",
 			"ErrorMessages": output.ErrorMessages,
 		}))
@@ -146,7 +99,7 @@ func handleGetVerification(c *gin.Context) {
 	}
 
 	// 検証コード入力フォーム、もしくは既にVerification Flow が完了している旨のメッセージをレンダリング
-	c.HTML(http.StatusOK, "verification/index.html", ViewParameters(c, gin.H{
+	c.HTML(http.StatusOK, "verification/index.html", viewParameters(c, gin.H{
 		"Title":              "Verification",
 		"VerificationFlowID": output.FlowID,
 		"CsrfToken":          output.CsrfToken,
@@ -155,15 +108,15 @@ func handleGetVerification(c *gin.Context) {
 }
 
 // Handler GET /verification/code handler
-func handleGetVerificationCode(c *gin.Context) {
+func (p *Provider) handleGetVerificationCode(c *gin.Context) {
 	// Verification Flow の作成 or 取得
 	// Verification flowを新規作成した場合は、FlowIDを含めてリダイレクト
-	output, err := CreateOrGetVerificationFlow(CreateOrGetVerificationFlowInput{
+	output, err := p.d.Kratos.CreateOrGetVerificationFlow(kratos.CreateOrGetVerificationFlowInput{
 		Cookie: c.Request.Header.Get("Cookie"),
 		FlowID: c.Query("flow"),
 	})
 	if err != nil {
-		c.HTML(http.StatusOK, "verification/code.html", ViewParameters(c, gin.H{
+		c.HTML(http.StatusOK, "verification/code.html", viewParameters(c, gin.H{
 			"Title":         "Verification",
 			"ErrorMessages": output.ErrorMessages,
 		}))
@@ -179,7 +132,7 @@ func handleGetVerificationCode(c *gin.Context) {
 	}
 
 	// 検証コード入力フォーム、もしくは既にVerification Flow が完了している旨のメッセージをレンダリング
-	c.HTML(http.StatusOK, "verification/code.html", ViewParameters(c, gin.H{
+	c.HTML(http.StatusOK, "verification/code.html", viewParameters(c, gin.H{
 		"Title":              "Verification",
 		"VerificationFlowID": output.FlowID,
 		"CsrfToken":          output.CsrfToken,
@@ -188,20 +141,20 @@ func handleGetVerificationCode(c *gin.Context) {
 }
 
 // Handler POST /verification/email
-func handlePostVerificationEmail(c *gin.Context) {
+func (p *Provider) handlePostVerificationEmail(c *gin.Context) {
 	flowID := c.Query("flow")
 	csrfToken := c.PostForm("csrf_token")
 	email := c.PostForm("email")
 
 	// Verification Flow 更新
-	output, err := UpdateVerificationFlow(UpdateVerificationFlowInput{
+	output, err := p.d.Kratos.UpdateVerificationFlow(kratos.UpdateVerificationFlowInput{
 		Cookie:    c.Request.Header.Get("Cookie"),
 		FlowID:    flowID,
 		Email:     email,
 		CsrfToken: csrfToken,
 	})
 	if err != nil {
-		c.HTML(http.StatusOK, "verification/_code_form.html", ViewParameters(c, gin.H{
+		c.HTML(http.StatusOK, "verification/_code_form.html", viewParameters(c, gin.H{
 			"Title":              "Verification",
 			"VerificationFlowID": flowID,
 			"CsrfToken":          csrfToken,
@@ -213,7 +166,7 @@ func handlePostVerificationEmail(c *gin.Context) {
 	// kratosのcookieをそのままブラウザへ受け渡す
 	setCookieToResponseHeader(c, output.Cookies)
 
-	c.HTML(http.StatusOK, "verification/_code_form.html", ViewParameters(c, gin.H{
+	c.HTML(http.StatusOK, "verification/_code_form.html", viewParameters(c, gin.H{
 		"Title":              "Verification",
 		"VerificationFlowID": flowID,
 		"CsrfToken":          csrfToken,
@@ -222,20 +175,20 @@ func handlePostVerificationEmail(c *gin.Context) {
 }
 
 // Handler POST /verification/code
-func handlePostVerificationCode(c *gin.Context) {
+func (p *Provider) handlePostVerificationCode(c *gin.Context) {
 	flowID := c.Query("flow")
 	csrfToken := c.PostForm("csrf_token")
 	code := c.PostForm("code")
 
 	// Verification Flow 更新
-	output, err := UpdateVerificationFlow(UpdateVerificationFlowInput{
+	output, err := p.d.Kratos.UpdateVerificationFlow(kratos.UpdateVerificationFlowInput{
 		Cookie:    c.Request.Header.Get("Cookie"),
 		FlowID:    flowID,
 		Code:      code,
 		CsrfToken: csrfToken,
 	})
 	if err != nil {
-		c.HTML(http.StatusOK, "verification/_code_form.html", ViewParameters(c, gin.H{
+		c.HTML(http.StatusOK, "verification/_code_form.html", viewParameters(c, gin.H{
 			"Title":              "Verification",
 			"VerificationFlowID": flowID,
 			"CsrfToken":          csrfToken,
@@ -253,23 +206,23 @@ func handlePostVerificationCode(c *gin.Context) {
 }
 
 // Handler GET /login
-func handleGetLogin(c *gin.Context) {
+func (p *Provider) handleGetLogin(c *gin.Context) {
 	var refresh bool
 
 	// 認証済みの場合、認証時刻の更新を実施
 	// プロフィール設定時に認証時刻が一定期間内である必要があり、過ぎている場合はログイン画面へリダイレクトし、ログインを促している
-	if IsAuthenticated(c) {
+	if isAuthenticated(c) {
 		refresh = true
 	}
 
 	// Login Flow の作成 or 取得
-	output, err := CreateOrGetLoginFlow(CreateOrGetLoginFlowInput{
+	output, err := p.d.Kratos.CreateOrGetLoginFlow(kratos.CreateOrGetLoginFlowInput{
 		Cookie:  c.Request.Header.Get("Cookie"),
 		FlowID:  c.Query("flow"),
 		Refresh: refresh,
 	})
 	if err != nil {
-		c.HTML(http.StatusOK, "login/index.html", ViewParameters(c, gin.H{
+		c.HTML(http.StatusOK, "login/index.html", viewParameters(c, gin.H{
 			"Title":         "Login",
 			"ErrorMessages": output.ErrorMessages,
 		}))
@@ -279,36 +232,45 @@ func handleGetLogin(c *gin.Context) {
 	// kratosのcookieをそのままブラウザへ受け渡す
 	setCookieToResponseHeader(c, output.Cookies)
 
-	if output.IsNewFlow {
-		c.Redirect(303, fmt.Sprintf("%s/login?flow=%s", generalEndpoint, output.FlowID))
-		return
-	}
-
 	// Login flowを新規作成した場合は、FlowIDを含めてリダイレクト
 	// return_to
 	//   指定時: ログイン後にreturn_toで指定されたURLへリダイレクト
 	//   未指定時: ログイン後にホーム画面へリダイレクト
-	returnTo := c.Query("return_to")
+	returnTo := url.QueryEscape(c.Query("return_to"))
+	slog.Info(returnTo)
+	slog.Info(url.QueryEscape("/settings/profile"))
 	if output.IsNewFlow {
-		c.Redirect(303, fmt.Sprintf("%s/login?flow=%s&return_to=%s", generalEndpoint, output.FlowID, returnTo))
+		var redirectTo string
+		if returnTo == "" {
+			redirectTo = fmt.Sprintf("%s/login?flow=%s", generalEndpoint, output.FlowID)
+		} else {
+			redirectTo = fmt.Sprintf("%s/login?flow=%s&return_to=%s", generalEndpoint, output.FlowID, returnTo)
+		}
+		redirect(c, redirectTo)
 		return
 	}
 
-	c.HTML(http.StatusOK, "login/index.html", ViewParameters(c, gin.H{
+	var information string
+	if existsAfterLoginHook(c, AFTER_LOGIN_HOOK_COOKIE_KEY_SETTINGS_PROFILE_UPDATE) {
+		information = "プロフィール更新のために、再度ログインをお願いします。"
+	}
+
+	c.HTML(http.StatusOK, "login/index.html", viewParameters(c, gin.H{
 		"Title":       "Login",
 		"LoginFlowID": output.FlowID,
 		"ReturnTo":    returnTo,
+		"Information": information,
 		"CsrfToken":   output.CsrfToken,
 	}))
 }
 
 // Handler POST /login
-func handlePostLogin(c *gin.Context) {
+func (p *Provider) handlePostLogin(c *gin.Context) {
 	flowID := c.Query("flow")
 	csrfToken := c.PostForm("csrf_token")
 
 	// Login Flow 更新
-	output, err := UpdateLoginFlow(UpdateLoginFlowInput{
+	output, err := p.d.Kratos.UpdateLoginFlow(kratos.UpdateLoginFlowInput{
 		Cookie:     c.Request.Header.Get("Cookie"),
 		FlowID:     flowID,
 		CsrfToken:  csrfToken,
@@ -317,7 +279,7 @@ func handlePostLogin(c *gin.Context) {
 	})
 	if err != nil {
 		c.Status(400)
-		c.HTML(http.StatusOK, "login/_form.html", ViewParameters(c, gin.H{
+		c.HTML(http.StatusOK, "login/_form.html", viewParameters(c, gin.H{
 			"Title":         "Login",
 			"LoginFlowID":   flowID,
 			"CsrfToken":     csrfToken,
@@ -329,22 +291,46 @@ func handlePostLogin(c *gin.Context) {
 	// kratosのcookieをそのままブラウザへ受け渡す
 	setCookieToResponseHeader(c, output.Cookies)
 
+	// ログインフック実行
+	hook, err := loadAfterLoginHook(c, AFTER_LOGIN_HOOK_COOKIE_KEY_SETTINGS_PROFILE_UPDATE)
+	if err != nil {
+		slog.Error(err.Error())
+		return
+	}
+	slog.Info(fmt.Sprintf("%v", hook))
+	slog.Info(fmt.Sprintf("%v", hook))
+	if hook.Operation == AFTER_LOGIN_HOOK_OPERATION_UPDATE_PROFILE {
+		hookParams, _ := hook.Params.(map[string]interface{})
+		err := p.updateProfile(c, settingsProfileEditViewParams{
+			FlowID:    hookParams["flow_id"].(string),
+			Email:     hookParams["email"].(string),
+			Nickname:  hookParams["nickname"].(string),
+			Birthdate: hookParams["birthdate"].(string),
+		})
+		if err != nil {
+			slog.Error(err.Error())
+			return
+		}
+	}
+
 	// Login flow成功時:
 	//   Traitsに設定させたい項目がまだ未設定の場合、Settings(profile)へリダイレクト
 	//   はホーム画面へリダイレクト
 	returnTo := c.Query("return_to")
+	slog.Info(returnTo)
+	var redirectTo string
 	if returnTo != "" {
-		c.Writer.Header().Set("HX-Redirect", returnTo)
+		redirectTo = returnTo
 	} else {
-		c.Writer.Header().Set("HX-Redirect", fmt.Sprintf("%s/", generalEndpoint))
+		redirectTo = fmt.Sprintf("%s/", generalEndpoint)
 	}
-	c.Status(200)
+	redirect(c, redirectTo)
 }
 
 // Handler POST /logout
-func handlePostLogout(c *gin.Context) {
+func (p *Provider) handlePostLogout(c *gin.Context) {
 	// Logout
-	_, err := Logout(LogoutFlowInput{
+	_, err := p.d.Kratos.Logout(kratos.LogoutFlowInput{
 		Cookie: c.Request.Header.Get("Cookie"),
 	})
 	c.SetCookie("kratos_general_session", "", -1, "/", "localhost", false, true)
@@ -359,15 +345,15 @@ func handlePostLogout(c *gin.Context) {
 }
 
 // Handler GET /recovery
-func handleGetRecovery(c *gin.Context) {
+func (p *Provider) handleGetRecovery(c *gin.Context) {
 	// Recovery Flow の作成 or 取得
 	// Recovery flowを新規作成した場合は、FlowIDを含めてリダイレクト
-	output, err := CreateOrGetRecoveryFlow(CreateOrGetRecoveryFlowInput{
+	output, err := p.d.Kratos.CreateOrGetRecoveryFlow(kratos.CreateOrGetRecoveryFlowInput{
 		Cookie: c.Request.Header.Get("Cookie"),
 		FlowID: c.Query("flow"),
 	})
 	if err != nil {
-		c.HTML(http.StatusOK, "recovery/index.html", ViewParameters(c, gin.H{
+		c.HTML(http.StatusOK, "recovery/index.html", viewParameters(c, gin.H{
 			"Title":         "Recovery",
 			"ErrorMessages": output.ErrorMessages,
 		}))
@@ -383,7 +369,7 @@ func handleGetRecovery(c *gin.Context) {
 	}
 
 	// flowの情報に従ってレンダリング
-	c.HTML(http.StatusOK, "recovery/index.html", ViewParameters(c, gin.H{
+	c.HTML(http.StatusOK, "recovery/index.html", viewParameters(c, gin.H{
 		"Title":          "Recovery",
 		"RecoveryFlowID": output.FlowID,
 		"CsrfToken":      output.CsrfToken,
@@ -391,19 +377,19 @@ func handleGetRecovery(c *gin.Context) {
 }
 
 // Handler POST /recovery/email
-func handlePostRecoveryEmail(c *gin.Context) {
+func (p *Provider) handlePostRecoveryEmail(c *gin.Context) {
 	flowID := c.Query("flow")
 	csrfToken := c.PostForm("csrf_token")
 
 	// Recovery Flow 更新
-	output, err := UpdateRecoveryFlow(UpdateRecoveryFlowInput{
+	output, err := p.d.Kratos.UpdateRecoveryFlow(kratos.UpdateRecoveryFlowInput{
 		Cookie:    c.Request.Header.Get("Cookie"),
 		FlowID:    flowID,
 		CsrfToken: csrfToken,
 		Email:     c.PostForm("email"),
 	})
 	if err != nil {
-		c.HTML(http.StatusOK, "recovery/_code_form.html", ViewParameters(c, gin.H{
+		c.HTML(http.StatusOK, "recovery/_code_form.html", viewParameters(c, gin.H{
 			"Title":          "Recovery",
 			"RecoveryFlowID": flowID,
 			"CsrfToken":      csrfToken,
@@ -416,7 +402,7 @@ func handlePostRecoveryEmail(c *gin.Context) {
 	setCookieToResponseHeader(c, output.Cookies)
 
 	// flowの情報に従ってレンダリング
-	c.HTML(http.StatusOK, "recovery/_code_form.html", ViewParameters(c, gin.H{
+	c.HTML(http.StatusOK, "recovery/_code_form.html", viewParameters(c, gin.H{
 		"Title":                    "Recovery",
 		"RecoveryFlowID":           flowID,
 		"CsrfToken":                csrfToken,
@@ -425,19 +411,19 @@ func handlePostRecoveryEmail(c *gin.Context) {
 }
 
 // Handler POST /recovery/code
-func handlePostRecoveryCode(c *gin.Context) {
+func (p *Provider) handlePostRecoveryCode(c *gin.Context) {
 	flowID := c.Query("flow")
 	csrfToken := c.PostForm("csrf_token")
 
 	// Recovery Flow 更新
-	output, err := UpdateRecoveryFlow(UpdateRecoveryFlowInput{
+	output, err := p.d.Kratos.UpdateRecoveryFlow(kratos.UpdateRecoveryFlowInput{
 		Cookie:    c.Request.Header.Get("Cookie"),
 		FlowID:    flowID,
 		CsrfToken: csrfToken,
 		Code:      c.PostForm("code"),
 	})
 	if err != nil && output.RedirectBrowserTo == "" {
-		c.HTML(http.StatusOK, "recovery/_code_form.html", ViewParameters(c, gin.H{
+		c.HTML(http.StatusOK, "recovery/_code_form.html", viewParameters(c, gin.H{
 			"Title":          "Recovery",
 			"RecoveryFlowID": flowID,
 			"CsrfToken":      csrfToken,
@@ -453,16 +439,16 @@ func handlePostRecoveryCode(c *gin.Context) {
 }
 
 // Handler GET /settings/password
-func handleGetPasswordSettings(c *gin.Context) {
+func (p *Provider) handleGetPasswordSettings(c *gin.Context) {
 	// Setting Flow の作成 or 取得
 	// Setting flowを新規作成した場合は、FlowIDを含めてリダイレクト
-	output, err := CreateOrGetSettingsFlow(CreateOrGetSettingsFlowInput{
+	output, err := p.d.Kratos.CreateOrGetSettingsFlow(kratos.CreateOrGetSettingsFlowInput{
 		Cookie: c.Request.Header.Get("Cookie"),
 		FlowID: c.Query("flow"),
 	})
 
 	if err != nil {
-		c.HTML(http.StatusOK, "settings/password/index.html", ViewParameters(c, gin.H{
+		c.HTML(http.StatusOK, "settings/password/index.html", viewParameters(c, gin.H{
 			"Title":         "Settings",
 			"ErrorMessages": output.ErrorMessages,
 		}))
@@ -472,7 +458,7 @@ func handleGetPasswordSettings(c *gin.Context) {
 	setCookieToResponseHeader(c, output.Cookies)
 
 	// flowの情報に従ってレンダリング
-	c.HTML(http.StatusOK, "settings/password/index.html", ViewParameters(c, gin.H{
+	c.HTML(http.StatusOK, "settings/password/index.html", viewParameters(c, gin.H{
 		"Title":                "Settings",
 		"SettingsFlowID":       output.FlowID,
 		"CsrfToken":            output.CsrfToken,
@@ -481,19 +467,19 @@ func handleGetPasswordSettings(c *gin.Context) {
 }
 
 // Handler POST /settings/password
-func handlePostSettingsPassword(c *gin.Context) {
+func (p *Provider) handlePostSettingsPassword(c *gin.Context) {
 	flowID := c.Query("flow")
 	csrfToken := c.PostForm("csrf_token")
 
 	// Setting Flow 更新
-	output, err := UpdateSettingsFlowPassword(UpdateSettingsFlowPasswordInput{
+	output, err := p.d.Kratos.UpdateSettingsFlowPassword(kratos.UpdateSettingsFlowPasswordInput{
 		Cookie:    c.Request.Header.Get("Cookie"),
 		FlowID:    flowID,
 		CsrfToken: csrfToken,
 		Password:  c.PostForm("password"),
 	})
 	if err != nil {
-		c.HTML(http.StatusOK, "settings/password/_form.html", ViewParameters(c, gin.H{
+		c.HTML(http.StatusOK, "settings/password/_form.html", viewParameters(c, gin.H{
 			"Title":          "Settings",
 			"SettingsFlowID": flowID,
 			"CsrfToken":      csrfToken,
@@ -510,17 +496,17 @@ func handlePostSettingsPassword(c *gin.Context) {
 }
 
 // Handler GET /settings/profile
-func handleGetSettingsProfile(c *gin.Context) {
-	session := GetSession(c)
+func (p *Provider) handleGetSettingsProfile(c *gin.Context) {
+	session := getSession(c)
 
 	// Setting Flow の作成 or 取得
 	// Setting flowを新規作成した場合は、FlowIDを含めてリダイレクト
-	output, err := CreateOrGetSettingsFlow(CreateOrGetSettingsFlowInput{
+	output, err := p.d.Kratos.CreateOrGetSettingsFlow(kratos.CreateOrGetSettingsFlowInput{
 		Cookie: c.Request.Header.Get("Cookie"),
 		FlowID: c.Query("flow"),
 	})
 	if err != nil {
-		c.HTML(http.StatusOK, "settings/profile/index.html", ViewParameters(c, gin.H{
+		c.HTML(http.StatusOK, "settings/profile/index.html", viewParameters(c, gin.H{
 			"Title":         "Settings",
 			"ErrorMessages": output.ErrorMessages,
 		}))
@@ -530,35 +516,37 @@ func handleGetSettingsProfile(c *gin.Context) {
 	setCookieToResponseHeader(c, output.Cookies)
 
 	// flowの情報に従ってレンダリング
-	nickname, ok := session.Identity.Traits.(map[string]interface{})["nickname"].(string)
-	if !ok {
-		nickname = ""
+	email := session.GetValueFromTraits("email")
+	nickname := session.GetValueFromTraits("nickname")
+	birthdate := session.GetValueFromTraits("birthdate")
+	var information string
+	if existsAfterLoginHook(c, AFTER_LOGIN_HOOK_COOKIE_KEY_SETTINGS_PROFILE_UPDATE) {
+		information = "プロフィールを更新しました。"
+		deleteAfterLoginHook(c, AFTER_LOGIN_HOOK_COOKIE_KEY_SETTINGS_PROFILE_UPDATE)
 	}
-	birthdate, ok := session.Identity.Traits.(map[string]interface{})["birthdate"].(string)
-	if !ok {
-		birthdate = ""
-	}
-	c.HTML(http.StatusOK, "settings/profile/index.html", ViewParameters(c, gin.H{
+	c.HTML(http.StatusOK, "settings/profile/index.html", viewParameters(c, gin.H{
 		"Title":          "Profile",
 		"SettingsFlowID": output.FlowID,
 		"CsrfToken":      output.CsrfToken,
+		"Email":          email,
 		"Nickname":       nickname,
 		"Birthdate":      birthdate,
+		"Information":    information,
 	}))
 }
 
 // Handler GET /settings/profile/edit
-func handleGetSettingsProfileEdit(c *gin.Context) {
-	session := GetSession(c)
+func (p *Provider) handleGetSettingsProfileEdit(c *gin.Context) {
+	session := getSession(c)
 
 	// Setting Flow の作成 or 取得
 	// Setting flowを新規作成した場合は、FlowIDを含めてリダイレクト
-	output, err := CreateOrGetSettingsFlow(CreateOrGetSettingsFlowInput{
+	output, err := p.d.Kratos.CreateOrGetSettingsFlow(kratos.CreateOrGetSettingsFlowInput{
 		Cookie: c.Request.Header.Get("Cookie"),
 		FlowID: c.Query("flow"),
 	})
 	if err != nil {
-		c.HTML(http.StatusOK, "settings/profile/edit.html", ViewParameters(c, gin.H{
+		c.HTML(http.StatusOK, "settings/profile/edit.html", viewParameters(c, gin.H{
 			"Title":         "Settings",
 			"ErrorMessages": output.ErrorMessages,
 		}))
@@ -567,46 +555,19 @@ func handleGetSettingsProfileEdit(c *gin.Context) {
 	// kratosのcookieをそのままブラウザへ受け渡す
 	setCookieToResponseHeader(c, output.Cookies)
 
-	// セッションが privileged_session_max_age を過ぎていた場合、ログイン画面へリダイレクト（再ログインの強制）
-	if NeedLoginWhenPrivilegedAccess(c) {
-		redirectTo := fmt.Sprintf("%s/login?return_to=%s", generalEndpoint, "/settings/profile/edit?flow="+output.FlowID)
-		if c.Request.Header.Get("HX-Request") == "true" {
-			c.Writer.Header().Set("HX-Redirect", redirectTo)
-		} else {
-			c.Redirect(303, redirectTo)
-		}
-		c.Status(200)
-		return
-	}
-
-	// プロフィール更新時にセッションがprivileged_session_max_age を過ぎていてログイン画面にログインされ、ログイン後に本APIへリダイレクトされた場合、
-	// 編集画面に入力したフォームの値がCookieに保存されているため、それを取得してフォームに表示する
-	// Cookieは取得後に削除する
-	params, err := loadSettingsProfileEditParamsFromCookie(c)
-	if err != nil {
-		slog.Error(err.Error())
-		return
-	}
-
-	// クッキーに編集画面のパラメータが保存されていない場合は、セッションから現在の値を取得
-	traits := session.Identity.Traits.(map[string]interface{})
-	slog.Info(fmt.Sprintf("%v", traits))
-	if params.Nickname == "" {
-		params.Nickname = getValueFromTraits(traits, "nickname")
-	}
-	if params.Birthdate == "" {
-		params.Nickname = getValueFromTraits(traits, "birthdate")
-	}
+	// セッションから現在の値を取得
+	params := mergeSettingsProfileEditViewParams(settingsProfileEditViewParams{}, session)
 
 	var information string
 	if existsTraitsFieldsNotFilledIn(session) {
 		information = "プロフィールの入力をお願いします"
 	}
 
-	c.HTML(http.StatusOK, "settings/profile/edit.html", ViewParameters(c, gin.H{
+	c.HTML(http.StatusOK, "settings/profile/edit.html", viewParameters(c, gin.H{
 		"Title":          "Profile",
 		"SettingsFlowID": output.FlowID,
 		"CsrfToken":      output.CsrfToken,
+		"Email":          params.Email,
 		"Nickname":       params.Nickname,
 		"Birthdate":      params.Birthdate,
 		"Infomation":     information,
@@ -614,17 +575,17 @@ func handleGetSettingsProfileEdit(c *gin.Context) {
 }
 
 // Handler GET /settings/profile/_form
-func handleGetSettingsProfileForm(c *gin.Context) {
-	session := GetSession(c)
+func (p *Provider) handleGetSettingsProfileForm(c *gin.Context) {
+	session := getSession(c)
 
 	// Setting Flow の作成 or 取得
 	// Setting flowを新規作成した場合は、FlowIDを含めてリダイレクト
-	output, err := CreateOrGetSettingsFlow(CreateOrGetSettingsFlowInput{
+	output, err := p.d.Kratos.CreateOrGetSettingsFlow(kratos.CreateOrGetSettingsFlowInput{
 		Cookie: c.Request.Header.Get("Cookie"),
 		FlowID: c.Query("flow"),
 	})
 	if err != nil {
-		c.HTML(http.StatusOK, "settings/profile/_form.html", ViewParameters(c, gin.H{
+		c.HTML(http.StatusOK, "settings/profile/_form.html", viewParameters(c, gin.H{
 			"Title":         "Settings",
 			"ErrorMessages": output.ErrorMessages,
 		}))
@@ -633,17 +594,18 @@ func handleGetSettingsProfileForm(c *gin.Context) {
 	// kratosのcookieをそのままブラウザへ受け渡す
 	setCookieToResponseHeader(c, output.Cookies)
 
-	// セッションが privileged_session_max_age を過ぎていた場合、ログイン画面へリダイレクト（再ログインの強制）
-	if NeedLoginWhenPrivilegedAccess(c) {
-		c.Writer.Header().Set("HX-Redirect", fmt.Sprintf("%s/login?return_to=%s", generalEndpoint, "/settings/profile/edit?flow="+output.FlowID))
-		c.Status(200)
-		return
-	}
+	// // セッションが privileged_session_max_age を過ぎていた場合、ログイン画面へリダイレクト（再ログインの強制）
+	// if NeedLoginWhenPrivilegedAccess(c) {
+	// 	returnTo := url.QueryEscape("/settings/profile/edit")
+	// 	redirectTo := fmt.Sprintf("%s/login?return_to=%s", generalEndpoint, returnTo)
+	// 	redirect(c, redirectTo)
+	// 	return
+	// }
 
 	// セッションから現在の値を取得
 	params := mergeSettingsProfileEditViewParams(settingsProfileEditViewParams{}, session)
 
-	c.HTML(http.StatusOK, "settings/profile/_form.html", ViewParameters(c, gin.H{
+	c.HTML(http.StatusOK, "settings/profile/_form.html", viewParameters(c, gin.H{
 		"Title":          "Profile",
 		"SettingsFlowID": output.FlowID,
 		"CsrfToken":      output.CsrfToken,
@@ -655,6 +617,7 @@ func handleGetSettingsProfileForm(c *gin.Context) {
 
 // Handler POST /settings/profile
 type handlePostSettingsProfileRequestPostForm struct {
+	Email     string
 	Nickname  string
 	Birthdate string
 }
@@ -666,15 +629,17 @@ func (f handlePostSettingsProfileRequestPostForm) Validate() error {
 	)
 }
 
-func handlePostSettingsProfile(c *gin.Context) {
-	session := GetSession(c)
+// Handler POST /settings/profile
+func (p *Provider) handlePostSettingsProfile(c *gin.Context) {
+	session := getSession(c)
 	flowID := c.Query("flow")
 	csrfToken := c.PostForm("csrf_token")
-	email := c.PostForm("email")
 	requestPostForm := handlePostSettingsProfileRequestPostForm{
+		Email:     c.PostForm("email"),
 		Nickname:  c.PostForm("nickname"),
 		Birthdate: c.PostForm("birthdate"),
 	}
+	slog.Info("requestPostForm", "nickname", requestPostForm.Nickname, "birthdate", requestPostForm.Birthdate)
 
 	err := requestPostForm.Validate()
 	if err != nil {
@@ -688,29 +653,38 @@ func handlePostSettingsProfile(c *gin.Context) {
 			slog.Info(verr.Code())
 			slog.Info(verr.Message())
 		}
-		c.HTML(http.StatusOK, "settings/profile/_form.html", ViewParameters(c, gin.H{
+		c.HTML(http.StatusOK, "settings/profile/_form.html", viewParameters(c, gin.H{
 			"SettingsFlowID":  flowID,
 			"CsrfToken":       csrfToken,
 			"ErrorMessages":   []string{"Error"},
-			"Email":           email,
+			"Email":           requestPostForm.Email,
 			"Nickname":        requestPostForm.Nickname,
-			"Birthdate":       requestPostForm.Nickname,
+			"Birthdate":       requestPostForm.Birthdate,
 			"ValidationError": validationErrors,
 		}))
 		return
 	}
 
 	params := mergeSettingsProfileEditViewParams(settingsProfileEditViewParams{
-		Email:     email,
+		FlowID:    flowID,
+		Email:     requestPostForm.Email,
 		Nickname:  requestPostForm.Nickname,
 		Birthdate: requestPostForm.Birthdate,
 	}, session)
+	slog.Info("params", "email", params.Email, "nickname", params.Nickname, "birthdate", params.Birthdate)
+
+	deleteAfterLoginHook(c, AFTER_LOGIN_HOOK_COOKIE_KEY_SETTINGS_PROFILE_UPDATE)
 
 	// セッションが privileged_session_max_age を過ぎていた場合、ログイン画面へリダイレクト（再ログインの強制）
-	if NeedLoginWhenPrivilegedAccess(c) {
-		err := saveSettingsProfileEditParamsToCookie(c, params)
+	if session.NeedLoginWhenPrivilegedAccess(c) {
+		slog.Info(fmt.Sprintf("%v", params))
+		// err := saveSettingsProfileEditParamsToCookie(c, params)
+		err := saveAfterLoginHook(c, afterLoginHook{
+			Operation: AFTER_LOGIN_HOOK_OPERATION_UPDATE_PROFILE,
+			Params:    params,
+		}, AFTER_LOGIN_HOOK_COOKIE_KEY_SETTINGS_PROFILE_UPDATE)
 		if err != nil {
-			c.HTML(http.StatusOK, "settings/profile/_form.html", ViewParameters(c, gin.H{
+			c.HTML(http.StatusOK, "settings/profile/_form.html", viewParameters(c, gin.H{
 				"Title":          "Settings",
 				"SettingsFlowID": flowID,
 				"CsrfToken":      csrfToken,
@@ -719,23 +693,29 @@ func handlePostSettingsProfile(c *gin.Context) {
 				"Nickname":       params.Nickname,
 				"Birthdate":      params.Birthdate,
 			}))
+		} else {
+			returnTo := url.QueryEscape("/settings/profile")
+			slog.Info(returnTo)
+			redirectTo := fmt.Sprintf("%s/login?return_to=%s", generalEndpoint, returnTo)
+			slog.Info(redirectTo)
+			redirect(c, redirectTo)
 		}
-		c.Writer.Header().Set("HX-Redirect", fmt.Sprintf("%s/login?return_to=%s", generalEndpoint, "/settings/profile/edit?flow="+flowID))
-		c.Status(200)
 		return
 	}
 
 	// Settings Flow の送信(完了)
-	output, err := UpdateSettingsFlowProfile(UpdateSettingsFlowProfileInput{
+	output, err := p.d.Kratos.UpdateSettingsFlowProfile(kratos.UpdateSettingsFlowProfileInput{
 		Cookie:    c.Request.Header.Get("Cookie"),
 		FlowID:    flowID,
 		CsrfToken: csrfToken,
-		Email:     params.Email,
-		Nickname:  params.Nickname,
-		Birthdate: params.Birthdate,
+		Traits: map[string]interface{}{
+			"email":     params.Email,
+			"nickname":  params.Nickname,
+			"birthdate": params.Birthdate,
+		},
 	})
 	if err != nil {
-		c.HTML(http.StatusOK, "settings/profile/_form.html", ViewParameters(c, gin.H{
+		c.HTML(http.StatusOK, "settings/profile/_form.html", viewParameters(c, gin.H{
 			"Title":         "Settings",
 			"CsrfToken":     csrfToken,
 			"ErrorMessages": output.ErrorMessages,
@@ -750,8 +730,49 @@ func handlePostSettingsProfile(c *gin.Context) {
 	setCookieToResponseHeader(c, output.Cookies)
 
 	// Settings flow成功時はVerification flowへリダイレクト
-	c.Writer.Header().Set("HX-Redirect", fmt.Sprintf("%s/", generalEndpoint))
+	// c.Writer.Header().Set("HX-Redirect", fmt.Sprintf("%s/", generalEndpoint))
+	c.Writer.Header().Set("HX-Location", fmt.Sprintf("%s/", generalEndpoint))
 	c.Status(200)
+}
+
+func (p *Provider) updateProfile(c *gin.Context, params settingsProfileEditViewParams) error {
+	session := getSession(c)
+	params = mergeSettingsProfileEditViewParams(settingsProfileEditViewParams{
+		Email:     params.Email,
+		Nickname:  params.Nickname,
+		Birthdate: params.Birthdate,
+	}, session)
+	slog.Info("params", "email", params.Email, "nickname", params.Nickname, "birthdate", params.Birthdate)
+
+	output, err := p.d.Kratos.CreateOrGetSettingsFlow(kratos.CreateOrGetSettingsFlowInput{
+		Cookie: c.Request.Header.Get("Cookie"),
+		FlowID: params.FlowID,
+	})
+	if err != nil {
+		slog.Error(err.Error())
+		return err
+	}
+
+	// Settings Flow の送信(完了)
+	updateOutput, err := p.d.Kratos.UpdateSettingsFlowProfile(kratos.UpdateSettingsFlowProfileInput{
+		Cookie:    c.Request.Header.Get("Cookie"),
+		FlowID:    output.FlowID,
+		CsrfToken: output.CsrfToken,
+		Traits: map[string]interface{}{
+			"email":     params.Email,
+			"nickname":  params.Nickname,
+			"birthdate": params.Birthdate,
+		},
+	})
+	if err != nil {
+		slog.Error(err.Error())
+		return err
+	}
+
+	// kratosのcookieをそのままブラウザへ受け渡す
+	setCookieToResponseHeader(c, updateOutput.Cookies)
+
+	return nil
 }
 
 // Home画面（ログイン必須）レンダリング
@@ -813,15 +834,15 @@ var items = []item{
 	},
 }
 
-func handleGetHome(c *gin.Context) {
-	c.HTML(http.StatusOK, "home/index.html", ViewParameters(c, gin.H{
+func (p *Provider) handleGetHome(c *gin.Context) {
+	c.HTML(http.StatusOK, "home/index.html", viewParameters(c, gin.H{
 		"Title": "Home",
 		"Items": items,
 	}))
 }
 
-func handleGetItemDetail(c *gin.Context) {
-	c.HTML(http.StatusOK, "item/detail.html", ViewParameters(c, gin.H{
+func (p *Provider) handleGetItemDetail(c *gin.Context) {
+	c.HTML(http.StatusOK, "item/detail.html", viewParameters(c, gin.H{
 		"Title": "Home",
 		"Items": items,
 	}))

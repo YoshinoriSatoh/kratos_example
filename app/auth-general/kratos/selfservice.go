@@ -1,10 +1,8 @@
-package main
+package kratos
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"time"
@@ -26,13 +24,13 @@ type ToSessionInput struct {
 
 type ToSessionOutput struct {
 	Cookies       []string
-	Session       *kratosclientgo.Session
+	Session       *Session
 	ErrorMessages []string
 }
 
-func ToSession(i ToSessionInput) (ToSessionOutput, error) {
+func (p *Provider) ToSession(i ToSessionInput) (ToSessionOutput, error) {
 	var output ToSessionOutput
-	session, response, err := kratosPublicClient.FrontendApi.
+	session, response, err := p.kratosPublicClient.FrontendApi.
 		ToSession(context.Background()).
 		Cookie(i.Cookie).
 		Execute()
@@ -42,35 +40,12 @@ func ToSession(i ToSessionInput) (ToSessionOutput, error) {
 		return output, err
 	}
 
-	output.Session = session
+	output.Session = NewFromKratosClientSession(session)
 
 	// browser flowでは、kartosから受け取ったcookieをそのままブラウザへ返却する
 	output.Cookies = response.Header["Set-Cookie"]
 
 	return output, nil
-}
-
-// ------------------------- Traits -------------------------
-func getValueFromTraits(traits map[string]interface{}, key string) string {
-	if traits[key] == nil {
-		return ""
-	}
-	email, ok := traits[key].(string)
-	if !ok {
-		email = ""
-	}
-	return email
-}
-
-func existsTraitsFieldsNotFilledIn(session *kratosclientgo.Session) bool {
-	traits := session.Identity.Traits.(map[string]interface{})
-	if getValueFromTraits(traits, "email") == "" ||
-		getValueFromTraits(traits, "nickname") == "" ||
-		getValueFromTraits(traits, "birthdate") == "" {
-		return true
-	} else {
-		return false
-	}
 }
 
 // ------------------------- Registration Flow -------------------------
@@ -90,7 +65,7 @@ type CreateOrGetRegistrationFlowOutput struct {
 // Registration Flow がなければ新規作成、あれば取得
 // csrfTokenは、本来は *kratosclientgo.RegistrationFlow から取得できるはずだが、
 // kratos-client-go:v1.0.0 に不具合があるため、http.Response から取得し返却している
-func CreateOrGetRegistrationFlow(i CreateOrGetRegistrationFlowInput) (CreateOrGetRegistrationFlowOutput, error) {
+func (p *Provider) CreateOrGetRegistrationFlow(i CreateOrGetRegistrationFlowInput) (CreateOrGetRegistrationFlowOutput, error) {
 	var (
 		err              error
 		response         *http.Response
@@ -101,7 +76,7 @@ func CreateOrGetRegistrationFlow(i CreateOrGetRegistrationFlowInput) (CreateOrGe
 	// flowID がない場合は新規にRegistration Flow を作成
 	// flowID がある場合はRegistration Flow を取得
 	if i.FlowID == "" {
-		registrationFlow, response, err = kratosPublicClient.FrontendApi.
+		registrationFlow, response, err = p.kratosPublicClient.FrontendApi.
 			CreateBrowserRegistrationFlow(context.Background()).
 			Execute()
 		if err != nil {
@@ -114,7 +89,7 @@ func CreateOrGetRegistrationFlow(i CreateOrGetRegistrationFlowInput) (CreateOrGe
 		output.IsNewFlow = true
 
 	} else {
-		registrationFlow, response, err = kratosPublicClient.FrontendApi.
+		registrationFlow, response, err = p.kratosPublicClient.FrontendApi.
 			GetRegistrationFlow(context.Background()).
 			Id(i.FlowID).
 			Cookie(i.Cookie).
@@ -157,7 +132,7 @@ type UpdateRegistrationFlowOutput struct {
 	ErrorMessages      []string
 }
 
-func UpdateRegistrationFlow(i UpdateRegistrationFlowInput) (UpdateRegistrationFlowOutput, error) {
+func (p *Provider) UpdateRegistrationFlow(i UpdateRegistrationFlowInput) (UpdateRegistrationFlowOutput, error) {
 	var output UpdateRegistrationFlowOutput
 
 	// Registration Flow の送信(完了)
@@ -171,7 +146,7 @@ func UpdateRegistrationFlow(i UpdateRegistrationFlowInput) (UpdateRegistrationFl
 			CsrfToken: &i.CsrfToken,
 		},
 	}
-	successfulRegistration, response, err := kratosPublicClient.FrontendApi.
+	successfulRegistration, response, err := p.kratosPublicClient.FrontendApi.
 		UpdateRegistrationFlow(context.Background()).
 		Flow(i.FlowID).
 		Cookie(i.Cookie).
@@ -215,7 +190,7 @@ type CreateOrGetVerificationFlowOutput struct {
 // Verification Flow がなければ新規作成、あれば取得
 // csrfTokenは、本来は *kratosclientgo.VerificationFlow から取得できるはずだが、
 // kratos-client-go:v1.0.0 に不具合があるため、http.Response から取得し返却している
-func CreateOrGetVerificationFlow(i CreateOrGetVerificationFlowInput) (CreateOrGetVerificationFlowOutput, error) {
+func (p *Provider) CreateOrGetVerificationFlow(i CreateOrGetVerificationFlowInput) (CreateOrGetVerificationFlowOutput, error) {
 	var (
 		err              error
 		response         *http.Response
@@ -226,7 +201,7 @@ func CreateOrGetVerificationFlow(i CreateOrGetVerificationFlowInput) (CreateOrGe
 	// flowID がない場合は新規にVerification Flow を作成
 	// flowID がある場合はVerification Flow を取得
 	if i.FlowID == "" {
-		verificationFlow, response, err = kratosPublicClient.FrontendApi.
+		verificationFlow, response, err = p.kratosPublicClient.FrontendApi.
 			CreateBrowserVerificationFlow(context.Background()).
 			Execute()
 		if err != nil {
@@ -239,7 +214,7 @@ func CreateOrGetVerificationFlow(i CreateOrGetVerificationFlowInput) (CreateOrGe
 		output.IsNewFlow = true
 
 	} else {
-		verificationFlow, response, err = kratosPublicClient.FrontendApi.
+		verificationFlow, response, err = p.kratosPublicClient.FrontendApi.
 			GetVerificationFlow(context.Background()).
 			Id(i.FlowID).
 			Cookie(i.Cookie).
@@ -286,7 +261,7 @@ type UpdateVerificationFlowOutput struct {
 	ErrorMessages []string
 }
 
-func UpdateVerificationFlow(i UpdateVerificationFlowInput) (UpdateVerificationFlowOutput, error) {
+func (p *Provider) UpdateVerificationFlow(i UpdateVerificationFlowInput) (UpdateVerificationFlowOutput, error) {
 	var (
 		output     UpdateVerificationFlowOutput
 		updateBody kratosclientgo.UpdateVerificationFlowWithCodeMethod
@@ -316,7 +291,7 @@ func UpdateVerificationFlow(i UpdateVerificationFlowInput) (UpdateVerificationFl
 	updateVerificationFlowBody := kratosclientgo.UpdateVerificationFlowBody{
 		UpdateVerificationFlowWithCodeMethod: &updateBody,
 	}
-	successfulVerification, response, err := kratosPublicClient.FrontendApi.
+	successfulVerification, response, err := p.kratosPublicClient.FrontendApi.
 		UpdateVerificationFlow(context.Background()).
 		Flow(i.FlowID).
 		Cookie(i.Cookie).
@@ -353,7 +328,7 @@ type CreateOrGetLoginFlowOutput struct {
 // Login Flow がなければ新規作成、あれば取得
 // csrfTokenは、本来は *kratosclientgo.LoginFlow から取得できるはずだが、
 // kratos-client-go:v1.0.0 に不具合があるため、http.Response から取得し返却している
-func CreateOrGetLoginFlow(i CreateOrGetLoginFlowInput) (CreateOrGetLoginFlowOutput, error) {
+func (p *Provider) CreateOrGetLoginFlow(i CreateOrGetLoginFlowInput) (CreateOrGetLoginFlowOutput, error) {
 	var (
 		err       error
 		response  *http.Response
@@ -364,7 +339,7 @@ func CreateOrGetLoginFlow(i CreateOrGetLoginFlowInput) (CreateOrGetLoginFlowOutp
 	// flowID がない場合は新規にLogin Flow を作成
 	// flowID がある場合はLogin Flow を取得
 	if i.FlowID == "" {
-		loginFlow, response, err = kratosPublicClient.FrontendApi.
+		loginFlow, response, err = p.kratosPublicClient.FrontendApi.
 			CreateBrowserLoginFlow(context.Background()).
 			Refresh(i.Refresh).
 			Cookie(i.Cookie).
@@ -379,7 +354,7 @@ func CreateOrGetLoginFlow(i CreateOrGetLoginFlowInput) (CreateOrGetLoginFlowOutp
 		output.IsNewFlow = true
 
 	} else {
-		loginFlow, response, err = kratosPublicClient.FrontendApi.
+		loginFlow, response, err = p.kratosPublicClient.FrontendApi.
 			GetLoginFlow(context.Background()).
 			Id(i.FlowID).
 			Cookie(i.Cookie).
@@ -421,7 +396,7 @@ type UpdateLoginFlowOutput struct {
 }
 
 // Login Flow の送信(完了)
-func UpdateLoginFlow(i UpdateLoginFlowInput) (UpdateLoginFlowOutput, error) {
+func (p *Provider) UpdateLoginFlow(i UpdateLoginFlowInput) (UpdateLoginFlowOutput, error) {
 	var output UpdateLoginFlowOutput
 
 	updateLoginFlowBody := kratosclientgo.UpdateLoginFlowBody{
@@ -432,7 +407,7 @@ func UpdateLoginFlow(i UpdateLoginFlowInput) (UpdateLoginFlowOutput, error) {
 			CsrfToken:  &i.CsrfToken,
 		},
 	}
-	successfulLogin, response, err := kratosPublicClient.FrontendApi.
+	successfulLogin, response, err := p.kratosPublicClient.FrontendApi.
 		UpdateLoginFlow(context.Background()).
 		Flow(i.FlowID).
 		Cookie(i.Cookie).
@@ -461,10 +436,10 @@ type LogoutFlowOutput struct {
 	ErrorMessages []string
 }
 
-func Logout(i LogoutFlowInput) (LogoutFlowOutput, error) {
+func (p *Provider) Logout(i LogoutFlowInput) (LogoutFlowOutput, error) {
 	var output LogoutFlowOutput
 
-	logoutFlow, response, err := kratosPublicClient.FrontendApi.
+	logoutFlow, response, err := p.kratosPublicClient.FrontendApi.
 		CreateBrowserLogoutFlow(context.Background()).
 		Cookie(i.Cookie).
 		Execute()
@@ -475,7 +450,7 @@ func Logout(i LogoutFlowInput) (LogoutFlowOutput, error) {
 	}
 
 	// Logout Flow の送信(完了)
-	response, err = kratosPublicClient.FrontendApi.
+	response, err = p.kratosPublicClient.FrontendApi.
 		UpdateLogoutFlow(context.Background()).
 		Token(logoutFlow.LogoutToken).
 		Cookie(i.Cookie).
@@ -489,28 +464,6 @@ func Logout(i LogoutFlowInput) (LogoutFlowOutput, error) {
 	output.Cookies = response.Header["Set-Cookie"]
 	return output, nil
 }
-
-// type LogoutIfNeededInput struct {
-// 	Cookie  string
-// 	Session *kratosclientgo.Session
-// }
-
-// func LogoutIfNeeded(i LogoutIfNeededInput) (bool, error) {
-// 	for _, v := range i.Session.AuthenticationMethods {
-// 		if *v.Method == "code_recovery" {
-// 			_, err := Logout(LogoutFlowInput{
-// 				Cookie: i.Cookie,
-// 			})
-// 			if err != nil {
-// 				slog.Error(err.Error())
-// 				return false, err
-// 			} else {
-// 				return true, nil
-// 			}
-// 		}
-// 	}
-// 	return false, nil
-// }
 
 // ------------------------- Recovery Flow -------------------------
 type CreateOrGetRecoveryFlowInput struct {
@@ -529,7 +482,7 @@ type CreateOrGetRecoveryFlowOutput struct {
 // Recovery Flow がなければ新規作成、あれば取得
 // csrfTokenは、本来は *kratosclientgo.RecoveryFlow から取得できるはずだが、
 // kratos-client-go:v1.0.0 に不具合があるため、http.Response から取得し返却している
-func CreateOrGetRecoveryFlow(i CreateOrGetRecoveryFlowInput) (CreateOrGetRecoveryFlowOutput, error) {
+func (p *Provider) CreateOrGetRecoveryFlow(i CreateOrGetRecoveryFlowInput) (CreateOrGetRecoveryFlowOutput, error) {
 	var (
 		err          error
 		response     *http.Response
@@ -540,7 +493,7 @@ func CreateOrGetRecoveryFlow(i CreateOrGetRecoveryFlowInput) (CreateOrGetRecover
 	// flowID がない場合は新規にRecovery Flow を作成してリダイレクト
 	// flowID がある場合はRecovery Flow を取得
 	if i.FlowID == "" {
-		recoveryFlow, response, err = kratosPublicClient.FrontendApi.
+		recoveryFlow, response, err = p.kratosPublicClient.FrontendApi.
 			CreateBrowserRecoveryFlow(context.Background()).
 			Execute()
 		if err != nil {
@@ -553,7 +506,7 @@ func CreateOrGetRecoveryFlow(i CreateOrGetRecoveryFlowInput) (CreateOrGetRecover
 		output.IsNewFlow = true
 
 	} else {
-		recoveryFlow, response, err = kratosPublicClient.FrontendApi.
+		recoveryFlow, response, err = p.kratosPublicClient.FrontendApi.
 			GetRecoveryFlow(context.Background()).
 			Id(i.FlowID).
 			Cookie(i.Cookie).
@@ -596,7 +549,7 @@ type UpdateRecoveryFlowOutput struct {
 }
 
 // Recovery Flow の送信(完了)
-func UpdateRecoveryFlow(i UpdateRecoveryFlowInput) (UpdateRecoveryFlowOutput, error) {
+func (p *Provider) UpdateRecoveryFlow(i UpdateRecoveryFlowInput) (UpdateRecoveryFlowOutput, error) {
 	var (
 		output     UpdateRecoveryFlowOutput
 		updateBody kratosclientgo.UpdateRecoveryFlowWithCodeMethod
@@ -626,7 +579,7 @@ func UpdateRecoveryFlow(i UpdateRecoveryFlowInput) (UpdateRecoveryFlowOutput, er
 	updateRecoveryFlowBody := kratosclientgo.UpdateRecoveryFlowBody{
 		UpdateRecoveryFlowWithCodeMethod: &updateBody,
 	}
-	recoveryFlow, response, err := kratosPublicClient.FrontendApi.
+	recoveryFlow, response, err := p.kratosPublicClient.FrontendApi.
 		UpdateRecoveryFlow(context.Background()).
 		Flow(i.FlowID).
 		Cookie(i.Cookie).
@@ -668,7 +621,7 @@ type CreateOrGetSettingsFlowOutput struct {
 // Settings Flow がなければ新規作成、あれば取得
 // csrfTokenは、本来は *kratosclientgo.SettingsFlow から取得できるはずだが、
 // kratos-client-go:v1.0.0 に不具合があるため、http.Response から取得し返却している
-func CreateOrGetSettingsFlow(i CreateOrGetSettingsFlowInput) (CreateOrGetSettingsFlowOutput, error) {
+func (p *Provider) CreateOrGetSettingsFlow(i CreateOrGetSettingsFlowInput) (CreateOrGetSettingsFlowOutput, error) {
 	var (
 		err          error
 		response     *http.Response
@@ -679,7 +632,7 @@ func CreateOrGetSettingsFlow(i CreateOrGetSettingsFlowInput) (CreateOrGetSetting
 	// flowID がない場合は新規にSettings Flow を作成してリダイレクト
 	// flowID がある場合はSettings Flow を取得
 	if i.FlowID == "" {
-		settingsFlow, response, err = kratosPublicClient.FrontendApi.
+		settingsFlow, response, err = p.kratosPublicClient.FrontendApi.
 			CreateBrowserSettingsFlow(context.Background()).
 			Cookie(i.Cookie).
 			Execute()
@@ -693,7 +646,7 @@ func CreateOrGetSettingsFlow(i CreateOrGetSettingsFlowInput) (CreateOrGetSetting
 		output.IsNewFlow = true
 
 	} else {
-		settingsFlow, response, err = kratosPublicClient.FrontendApi.
+		settingsFlow, response, err = p.kratosPublicClient.FrontendApi.
 			GetSettingsFlow(context.Background()).
 			Id(i.FlowID).
 			Cookie(i.Cookie).
@@ -734,7 +687,7 @@ type UpdateSettingsFlowPasswordOutput struct {
 }
 
 // Settings Flow (password) の送信(完了)
-func UpdateSettingsFlowPassword(i UpdateSettingsFlowPasswordInput) (UpdateSettingsFlowPasswordOutput, error) {
+func (p *Provider) UpdateSettingsFlowPassword(i UpdateSettingsFlowPasswordInput) (UpdateSettingsFlowPasswordOutput, error) {
 	var (
 		output UpdateSettingsFlowPasswordOutput
 	)
@@ -747,7 +700,7 @@ func UpdateSettingsFlowPassword(i UpdateSettingsFlowPasswordInput) (UpdateSettin
 			CsrfToken: &i.CsrfToken,
 		},
 	}
-	successfulSettings, response, err := kratosPublicClient.FrontendApi.
+	successfulSettings, response, err := p.kratosPublicClient.FrontendApi.
 		UpdateSettingsFlow(context.Background()).
 		Flow(i.FlowID).
 		Cookie(i.Cookie).
@@ -758,7 +711,7 @@ func UpdateSettingsFlowPassword(i UpdateSettingsFlowPasswordInput) (UpdateSettin
 		output.ErrorMessages = getErrorMessagesFromFlowHttpResponse(response)
 		return output, err
 	}
-	slog.Info("UpdateRegisration Succeed", "SuccessfulSettings", successfulSettings, "Response", response)
+	slog.Info("UpdateSettings Succeed", "SuccessfulSettings", successfulSettings, "Response", response)
 
 	// browser flowでは、kartosから受け取ったcookieをそのままブラウザへ返却する
 	output.Cookies = response.Header["Set-Cookie"]
@@ -770,9 +723,7 @@ type UpdateSettingsFlowProfileInput struct {
 	Cookie    string
 	FlowID    string
 	CsrfToken string
-	Email     string
-	Nickname  string
-	Birthdate string
+	Traits    map[string]interface{}
 }
 
 type UpdateSettingsFlowProfileOutput struct {
@@ -781,7 +732,7 @@ type UpdateSettingsFlowProfileOutput struct {
 }
 
 // Settings Flow (profile) の送信(完了)
-func UpdateSettingsFlowProfile(i UpdateSettingsFlowProfileInput) (UpdateSettingsFlowProfileOutput, error) {
+func (p *Provider) UpdateSettingsFlowProfile(i UpdateSettingsFlowProfileInput) (UpdateSettingsFlowProfileOutput, error) {
 	var (
 		output UpdateSettingsFlowProfileOutput
 	)
@@ -789,16 +740,12 @@ func UpdateSettingsFlowProfile(i UpdateSettingsFlowProfileInput) (UpdateSettings
 	// Settings Flow の送信(完了)
 	updateSettingsFlowBody := kratosclientgo.UpdateSettingsFlowBody{
 		UpdateSettingsFlowWithProfileMethod: &kratosclientgo.UpdateSettingsFlowWithProfileMethod{
-			Method: "profile",
-			Traits: map[string]interface{}{
-				"email":     i.Email,
-				"nickname":  i.Nickname,
-				"birthdate": i.Birthdate,
-			},
+			Method:    "profile",
+			Traits:    i.Traits,
 			CsrfToken: &i.CsrfToken,
 		},
 	}
-	successfulSettings, response, err := kratosPublicClient.FrontendApi.
+	successfulSettings, response, err := p.kratosPublicClient.FrontendApi.
 		UpdateSettingsFlow(context.Background()).
 		Flow(i.FlowID).
 		Cookie(i.Cookie).
@@ -809,122 +756,10 @@ func UpdateSettingsFlowProfile(i UpdateSettingsFlowProfileInput) (UpdateSettings
 		output.ErrorMessages = getErrorMessagesFromFlowHttpResponse(response)
 		return output, err
 	}
-	slog.Info("UpdateRegisration Succeed", "SuccessfulSettings", successfulSettings, "Response", response)
+	slog.Info("UpdateSettings Succeed", "SuccessfulSettings", successfulSettings, "Response", response)
 
 	// browser flowでは、kartosから受け取ったcookieをそのままブラウザへ返却する
 	output.Cookies = response.Header["Set-Cookie"]
 
 	return output, nil
-}
-
-// flow の ui から csrf_token を取得
-// SDKを使用しているので、本来は上記レスポンスの第一引数である registrationFlow *kratosclientgo.RegistrationFlow から取得するところだが、
-// goのv1.0.0のSDKには不具合があるらしく、仕方ないのでhttp.Responseから取得している
-// https://github.com/ory/sdk/issues/292
-func getCsrfTokenFromFlowHttpResponse(r *http.Response) (string, error) {
-	defer r.Body.Close()
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		slog.Error(err.Error())
-		return "", err
-	}
-
-	var result interface{}
-	if err := json.Unmarshal(body, &result); err != nil {
-		slog.Error(err.Error())
-		return "", err
-	}
-
-	var csrfToken string
-	for _, node := range result.(map[string]interface{})["ui"].(map[string]interface{})["nodes"].([]interface{}) {
-		attrName := node.(map[string]interface{})["attributes"].(map[string]interface{})["name"]
-		if attrName != nil && attrName.(string) == "csrf_token" {
-			csrfToken = node.(map[string]interface{})["attributes"].(map[string]interface{})["value"].(string)
-			break
-		}
-	}
-	slog.Info(csrfToken)
-	return csrfToken, nil
-}
-
-func getContinueWithVerificationUiFlowIdFromFlowHttpResponse(r *http.Response) (string, error) {
-	defer r.Body.Close()
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		slog.Error(err.Error())
-		return "", err
-	}
-
-	var result interface{}
-	if err := json.Unmarshal(body, &result); err != nil {
-		slog.Error(err.Error())
-		return "", err
-	}
-
-	var verificationFlowID string
-	for _, continueWith := range result.(map[string]interface{})["continue_with"].([]interface{}) {
-		if continueWith.(map[string]interface{})["action"].(string) == "show_verification_ui" {
-			verificationFlowID = continueWith.(map[string]interface{})["flow"].(map[string]interface{})["id"].(string)
-			break
-		}
-	}
-	slog.Info(verificationFlowID)
-	return verificationFlowID, nil
-}
-
-func getRedirectBrowserToFromFlowHttpResponse(r *http.Response) (string, error) {
-	defer r.Body.Close()
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		slog.Error(err.Error())
-		return "", err
-	}
-
-	var result interface{}
-	if err := json.Unmarshal(body, &result); err != nil {
-		slog.Error(err.Error())
-		return "", err
-	}
-	return result.(map[string]interface{})["redirect_browser_to"].(string), nil
-}
-
-func getErrorMessagesFromFlowHttpResponse(r *http.Response) []string {
-	defer r.Body.Close()
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		slog.Error(err.Error())
-		return []string{}
-	}
-
-	var result interface{}
-	if err := json.Unmarshal(body, &result); err != nil {
-		slog.Error(err.Error())
-		return []string{}
-	}
-
-	var messages []string
-	resultObj, ok := result.(map[string]interface{})
-	slog.Info(fmt.Sprintf("%v", resultObj))
-	if ok && resultObj != nil {
-		uiObj, uiOk := resultObj["ui"].(map[string]interface{})
-		slog.Info(fmt.Sprintf("%v", uiObj))
-		errorObj, errorOk := resultObj["error"].(map[string]interface{})
-		slog.Info(fmt.Sprintf("%v", errorObj))
-		if uiOk && uiObj != nil {
-			messageArr, ok := uiObj["messages"].([]interface{})
-			slog.Info(fmt.Sprintf("%v", messageArr...))
-			if ok && len(messageArr) > 0 {
-				for _, message := range messageArr {
-					slog.Info(fmt.Sprintf("%v", message))
-					if message.(map[string]interface{})["type"].(string) == "error" {
-						slog.Info(fmt.Sprintf("%v", message))
-						messages = append(messages, message.(map[string]interface{})["text"].(string))
-					}
-				}
-			}
-		} else if errorOk && errorObj != nil {
-			messages = append(messages, errorObj["message"].(string))
-		}
-	}
-	return messages
 }

@@ -3,7 +3,7 @@ tmp_dir = "tmp"
 
 [build]
   bin = "tmp/main"
-  cmd = "go build -o tmp/main *.go"
+  cmd = "go build -o tmp/main cmd/server/main.go"
   delay = 1000
   exclude_dir = []
   exclude_file = []

@@ -1,12 +1,11 @@
 {{define "login/_form.html"}}
-{{ if }}
-<div class="alert alert-info mt-2">
+{{ if and (ne .Information "") (ne .Information nil) }}
+<div class="alert alert-info my-2">
   <div>
-    <div>アカウント検証メールが送信されました。</div>
-    <div>メールに記載されている6桁の検証コードを入力してください。 </div>
-    <a class="link" href="http://localhost:4436" target="_blank">localhostのメールサーバはこちら</a>
+    <div>{{.Information}}</div>
   </div>
 </div>
+{{end}}
 <form 
   id="login-form"
   hx-post="/login?flow={{.LoginFlowID}}&return_to={{.ReturnTo}}" 

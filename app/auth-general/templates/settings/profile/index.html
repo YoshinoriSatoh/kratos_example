@@ -3,6 +3,13 @@
 
 <div class="container mx-auto px-24">
   <h2 class="text-lg text-center font-bold">プロフィール</h2>
+  {{ if and (ne .Information "") (ne .Information nil) }}
+  <div class="alert alert-info my-2">
+    <div>
+      <div>{{.Information}}</div>
+    </div>
+  </div>
+  {{end}}
   {{template "settings/profile/_view.html" .}}
 </div>
   
