@@ -1,21 +1,24 @@
 package handler
 
 import (
+	"context"
+	"fmt"
 	"kratos_example/kratos"
-
-	"github.com/gin-gonic/gin"
+	"log/slog"
 )
 
-func getSession(c *gin.Context) *kratos.Session {
-	session, exists := c.Get("session")
-	if !exists || session == nil {
+func getSession(ctx context.Context) *kratos.Session {
+	session := ctx.Value("session")
+	if session == nil {
 		return nil
 	}
-	return session.(*kratos.Session)
+	slog.Info(fmt.Sprintf("%v", session))
+
+	kratosSession, _ := session.(*kratos.Session)
+	return kratosSession
 }
 
-func isAuthenticated(c *gin.Context) bool {
-	session := getSession(c)
+func isAuthenticated(session *kratos.Session) bool {
 	if session != nil {
 		return true
 	} else {

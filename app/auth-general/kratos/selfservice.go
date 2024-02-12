@@ -30,6 +30,7 @@ type ToSessionOutput struct {
 
 func (p *Provider) ToSession(i ToSessionInput) (ToSessionOutput, error) {
 	var output ToSessionOutput
+	slog.Info("ToSession", "Cookie", i.Cookie)
 	session, response, err := p.kratosPublicClient.FrontendApi.
 		ToSession(context.Background()).
 		Cookie(i.Cookie).

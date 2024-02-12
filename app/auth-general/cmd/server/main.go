@@ -1,13 +1,11 @@
 package main
 
 import (
-	"html/template"
 	"kratos_example/handler"
 	"kratos_example/kratos"
 	"log/slog"
+	"net/http"
 	"os"
-
-	"github.com/gin-gonic/gin"
 )
 
 var (
@@ -53,19 +51,22 @@ func init() {
 }
 
 func main() {
-	e := gin.New()
-	e.Use(gin.LoggerWithConfig(gin.LoggerConfig{
-		SkipPaths: []string{"/public/health"},
-	}))
-	e.Use(gin.Recovery())
+	// e := gin.New()
+	// e.Use(gin.LoggerWithConfig(gin.LoggerConfig{
+	// 	SkipPaths: []string{"/public/health"},
+	// }))
+	// e.Use(gin.Recovery())
 
-	templateList := template.Must(template.New("").ParseGlob("templates/**/*.html"))
-	templateList = template.Must(templateList.ParseGlob("templates/**/**/*.html"))
+	// e.SetHTMLTemplate(templateList)
+	// e.Static("/static", "./static")
 
-	e.SetHTMLTemplate(templateList)
-	e.Static("/static", "./static")
+	mux := http.NewServeMux()
+	// mux.HandleFunc("GET /static", func(w http.ResponseWriter, r *http.Request) {
+	// 	http.ServeFile(w, r, "/static")
+	// })
+	mux = handlerProvider.RegisterHandles(mux)
 
-	handlerProvider.Register(e)
-
-	e.Run(":3000")
+	if err := http.ListenAndServe(":3000", mux); err != nil {
+		panic(err)
+	}
 }

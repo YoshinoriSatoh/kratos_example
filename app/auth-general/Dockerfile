@@ -1,7 +1,7 @@
 # syntax = docker/dockerfile:experimental
 
 # Base
-FROM golang:1.21-bullseye as base
+FROM golang:1.22-bullseye as base
 RUN apt-get -y update
 ## locale日本語化
 RUN apt-get install -y locales && \

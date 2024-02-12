@@ -7,43 +7,40 @@ import (
 	"kratos_example/kratos"
 	"log/slog"
 	"net/http"
-
-	"github.com/gin-gonic/gin"
 )
 
-func setCookieToResponseHeader(c *gin.Context, cookies []string) {
+func setCookieToResponseHeader(w http.ResponseWriter, cookies []string) {
 	for _, cookie := range cookies {
-		c.Writer.Header().Add("Set-Cookie", cookie)
+		w.Header().Add("Set-Cookie", cookie)
 	}
 }
 
-func redirect(c *gin.Context, redirectTo string) {
-	slog.Debug(c.Request.Header.Get("HX-Request"))
+func redirect(w http.ResponseWriter, r *http.Request, redirectTo string) {
+	slog.Debug(r.Header.Get("HX-Request"))
 	slog.Debug(redirectTo)
-	if c.Request.Header.Get("HX-Request") == "true" {
-		c.Writer.Header().Set("HX-Redirect", redirectTo)
-		c.Status(http.StatusOK)
+	if r.Header.Get("HX-Request") == "true" {
+		w.Header().Set("HX-Redirect", redirectTo)
+		w.WriteHeader(http.StatusSeeOther)
 	} else {
-		c.Redirect(303, redirectTo)
+		http.Redirect(w, r, redirectTo, http.StatusSeeOther)
 	}
 }
 
-func viewParameters(c *gin.Context, p gin.H) gin.H {
+func viewParameters(session *kratos.Session, r *http.Request, p map[string]any) map[string]any {
 	params := p
-	params["IsAuthenticated"] = isAuthenticated(c)
-	params["Navbar"] = getNavbarviewParameters(c)
-	params["Path"] = c.Request.URL.Path
+	params["IsAuthenticated"] = isAuthenticated(session)
+	params["Navbar"] = getNavbarviewParameters(session)
+	params["Path"] = r.URL.Path
 	return params
 }
 
-func getNavbarviewParameters(c *gin.Context) gin.H {
+func getNavbarviewParameters(session *kratos.Session) map[string]any {
 	var nickname string
 
-	session := getSession(c)
 	if session != nil {
 		nickname = session.GetValueFromTraits("nickname")
 	}
-	return gin.H{
+	return map[string]any{
 		"Nickname": nickname,
 	}
 }
@@ -66,7 +63,7 @@ const (
 	AFTER_LOGIN_HOOK_COOKIE_KEY_SETTINGS_PROFILE_UPDATE = "after_login_hook_settings_profile_update"
 )
 
-func saveAfterLoginHook(c *gin.Context, loginHook afterLoginHook, cookieKey afterLoginHookCookieKey) error {
+func saveAfterLoginHook(w http.ResponseWriter, loginHook afterLoginHook, cookieKey afterLoginHookCookieKey) error {
 	cookieString, err := json.Marshal(loginHook)
 	if err != nil {
 		slog.Error(err.Error())
@@ -74,12 +71,20 @@ func saveAfterLoginHook(c *gin.Context, loginHook afterLoginHook, cookieKey afte
 	}
 	base64CookieString := base64.URLEncoding.EncodeToString(cookieString)
 	slog.Info(base64CookieString)
-	c.SetCookie(string(cookieKey), base64CookieString, 3600, "/", "localhost", false, true)
+	http.SetCookie(w, &http.Cookie{
+		Name:     string(cookieKey),
+		Value:    base64CookieString,
+		MaxAge:   3600,
+		Path:     "/",
+		Domain:   "localhost",
+		Secure:   false,
+		HttpOnly: true,
+	})
 	return nil
 }
 
-func existsAfterLoginHook(c *gin.Context, cookieKey afterLoginHookCookieKey) bool {
-	_, err := c.Cookie(string(cookieKey))
+func existsAfterLoginHook(r *http.Request, cookieKey afterLoginHookCookieKey) bool {
+	_, err := r.Cookie(string(cookieKey))
 	if err != nil {
 		// Cookieがない場合にエラーとはしない
 		slog.Info(err.Error())
@@ -89,14 +94,14 @@ func existsAfterLoginHook(c *gin.Context, cookieKey afterLoginHookCookieKey) boo
 	}
 }
 
-func loadAfterLoginHook(c *gin.Context, cookieKey afterLoginHookCookieKey) (afterLoginHook, error) {
-	cookieString, err := c.Cookie(string(cookieKey))
+func loadAfterLoginHook(r *http.Request, cookieKey afterLoginHookCookieKey) (afterLoginHook, error) {
+	cookieString, err := r.Cookie(string(cookieKey))
 	if err != nil {
 		// Cookieがない場合にエラーとはしない
 		slog.Info(err.Error())
 		return afterLoginHook{}, nil
 	}
-	cookieBytes, err := base64.URLEncoding.DecodeString(cookieString)
+	cookieBytes, err := base64.URLEncoding.DecodeString(cookieString.Value)
 	if err != nil {
 		slog.Error(err.Error())
 		return afterLoginHook{}, err
@@ -112,8 +117,16 @@ func loadAfterLoginHook(c *gin.Context, cookieKey afterLoginHookCookieKey) (afte
 	return hook, nil
 }
 
-func deleteAfterLoginHook(c *gin.Context, cookieKey afterLoginHookCookieKey) {
-	c.SetCookie(string(cookieKey), "", -1, "/", "localhost", false, true)
+func deleteAfterLoginHook(w http.ResponseWriter, cookieKey afterLoginHookCookieKey) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     string(cookieKey),
+		Value:    "",
+		MaxAge:   -1,
+		Path:     "/",
+		Domain:   "localhost",
+		Secure:   false,
+		HttpOnly: true,
+	})
 }
 
 // ------------------------- Settings profile edit view paremeter -------------------------

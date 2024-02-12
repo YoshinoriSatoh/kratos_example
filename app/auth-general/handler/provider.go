@@ -1,14 +1,13 @@
 package handler
 
 import (
+	"context"
 	"fmt"
 	"kratos_example/kratos"
 	"log/slog"
 	"net/http"
 	"os"
 	"slices"
-
-	"github.com/gin-gonic/gin"
 )
 
 type Provider struct {
@@ -31,87 +30,108 @@ func New(i NewInput, d Dependencies) (*Provider, error) {
 	return &p, nil
 }
 
-func (p *Provider) Register(e *gin.Engine) {
-	e.Use(p.getKratosSession())
-	e.Use(p.redirectIfExistsTraitsFieldsNotFilledIn())
+func (p *Provider) baseMiddleware(hendler http.HandlerFunc) http.Handler {
+	return p.setSession(
+		p.redirectIfExistsTraitsFieldsNotFilledIn(hendler),
+	)
+}
 
-	e.GET("/public/health", func(c *gin.Context) {
-		c.Status(http.StatusOK)
-	})
+func (p *Provider) settingsMiddleware(hendler http.HandlerFunc) http.Handler {
+	return p.setSession(
+		p.redirectIfExistsTraitsFieldsNotFilledIn(
+			p.requireAuthenticated(hendler),
+		),
+	)
+}
 
-	// Registration
-	e.GET("/registration", p.handleGetRegistration)
-	e.POST("/registration", p.handlePostRegistration)
+func (p *Provider) RegisterHandles(mux *http.ServeMux) *http.ServeMux {
+	mux.Handle("GET /public/health", p.baseMiddleware(p.handleGetHealth))
 
-	// Verification
-	e.GET("/verification", p.handleGetVerification)
-	e.GET("/verification/code", p.handleGetVerificationCode)
-	e.POST("/verification/email", p.handlePostVerificationEmail)
-	e.POST("/verification/code", p.handlePostVerificationCode)
+	// // Registration
+	mux.Handle("GET /registration", p.baseMiddleware(p.handleGetRegistration))
+	mux.Handle("POST /registration", p.baseMiddleware(p.handlePostRegistration))
+
+	// // Verification
+	mux.Handle("GET /verification", p.baseMiddleware(p.handleGetVerification))
+	mux.Handle("GET /verification/code", p.baseMiddleware(p.handleGetVerificationCode))
+	mux.Handle("POST /verification/email", p.baseMiddleware(p.handlePostVerificationEmail))
+	mux.Handle("POST /verification/code", p.baseMiddleware(p.handlePostVerificationCode))
 
 	// Login
-	e.GET("/login", p.handleGetLogin)
-	e.POST("/login", p.handlePostLogin)
+	mux.Handle("GET /login", p.baseMiddleware(p.handleGetLogin))
+	mux.Handle("POST /login", p.baseMiddleware(p.handlePostLogin))
 
 	// Logout
-	e.POST("/logout", p.handlePostLogout)
+	mux.Handle("POST /logout", p.baseMiddleware(p.handlePostLogout))
 
 	// Recovery
-	e.GET("/recovery", p.handleGetRecovery)
-	e.POST("/recovery/email", p.handlePostRecoveryEmail)
-	e.POST("/recovery/code", p.handlePostRecoveryCode)
+	mux.Handle("GET /recovery", p.baseMiddleware(p.handleGetRecovery))
+	mux.Handle("POST /recovery/email", p.baseMiddleware(p.handlePostRecoveryEmail))
+	mux.Handle("POST /recovery/code", p.baseMiddleware(p.handlePostRecoveryCode))
 
 	// Settings
-	settingsRoute := e.Group("/settings", p.requireAuthenticated())
-	settingsRoute.GET("/password", p.handleGetPasswordSettings)
-	settingsRoute.POST("/password", p.handlePostSettingsPassword)
-	settingsRoute.GET("/profile", p.handleGetSettingsProfile)
-	settingsRoute.GET("/profile/edit", p.handleGetSettingsProfileEdit)
-	settingsRoute.GET("/profile/_form", p.handleGetSettingsProfileForm)
-	settingsRoute.POST("/profile", p.handlePostSettingsProfile)
+	mux.Handle("GET /settings/password", p.settingsMiddleware(p.handleGetPasswordSettings))
+	mux.Handle("POST /settings/password", p.settingsMiddleware(p.handlePostSettingsPassword))
+	mux.Handle("GET /settings/profile", p.settingsMiddleware(p.handleGetSettingsProfile))
+	mux.Handle("GET /settings/profile/edit", p.settingsMiddleware(p.handleGetSettingsProfileEdit))
+	mux.Handle("GET /settings/profile/_form", p.settingsMiddleware(p.handleGetSettingsProfileForm))
+	mux.Handle("POST /settings/profile", p.settingsMiddleware(p.handlePostSettingsProfile))
 
-	e.GET("/", p.handleGetHome)
-	e.GET("/item/:id", p.handleGetItemDetail)
+	mux.Handle("GET /", p.baseMiddleware(p.handleGetHome))
+	mux.Handle("GET /item/{id}", p.baseMiddleware(p.handleGetItemDetail))
+
+	return mux
 }
 
-func (p *Provider) getKratosSession() gin.HandlerFunc {
-	return func(c *gin.Context) {
+func (p *Provider) setSession(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		slog.Info("setSession")
+		ctx := r.Context()
 		output, err := p.d.Kratos.ToSession(kratos.ToSessionInput{
-			Cookie: c.Request.Header.Get("Cookie"),
+			Cookie: r.Header.Get("Cookie"),
 		})
 		if err != nil {
-			c.Set("session", nil)
+			slog.Info("setSession error")
+			slog.Info(err.Error())
+			ctx = context.WithValue(ctx, "session", nil)
+			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}
-		c.Set("session", output.Session)
-
-		c.Next()
-	}
+		ctx = context.WithValue(ctx, "session", output.Session)
+		session := getSession(ctx)
+		slog.Info(fmt.Sprintf("%v", session))
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
 
-func (p *Provider) redirectIfExistsTraitsFieldsNotFilledIn() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		session := getSession(c)
+func (p *Provider) redirectIfExistsTraitsFieldsNotFilledIn(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		session := getSession(ctx)
 		targetPaths := []string{"/settings/profile/edit", "/login"}
-		if isAuthenticated(c) &&
+		slog.Info("redirectIfExistsTraitsFieldsNotFilledIn")
+		slog.Info(fmt.Sprintf("%v", isAuthenticated(session)))
+		slog.Info(fmt.Sprintf("%v", existsTraitsFieldsNotFilledIn(session)))
+		if isAuthenticated(session) &&
 			existsTraitsFieldsNotFilledIn(session) &&
-			!slices.Contains(targetPaths, c.Request.URL.Path) {
-			c.Redirect(303, fmt.Sprintf("%s/settings/profile/edit", generalEndpoint))
+			!slices.Contains(targetPaths, r.URL.Path) {
+			redirect(w, r, fmt.Sprintf("%s/settings/profile/edit", generalEndpoint))
 		} else {
-			c.Next()
+			next.ServeHTTP(w, r.WithContext(ctx))
 		}
-	}
+	})
 }
 
-func (p *Provider) requireAuthenticated() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if isAuthenticated(c) {
+func (p *Provider) requireAuthenticated(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		session := getSession(ctx)
+		if isAuthenticated(session) {
 			slog.Info("Authenticated")
-			c.Next()
+			next.ServeHTTP(w, r.WithContext(ctx))
 		} else {
 			slog.Info("Not Authenticated")
-			// c.AbortWithStatus(http.StatusUnauthorized)
-			c.Redirect(303, fmt.Sprintf("%s/error/unauthorized", generalEndpoint))
+			redirect(w, r, fmt.Sprintf("%s/error/unauthorized", generalEndpoint))
 		}
-	}
+	})
 }

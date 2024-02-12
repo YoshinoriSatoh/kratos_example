@@ -4,7 +4,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	kratosclientgo "github.com/ory/kratos-client-go"
 )
 
@@ -32,7 +31,7 @@ func (s *Session) GetValueFromTraits(key string) string {
 }
 
 // セッションがprivileged_session_max_age を過ぎているかどうかを返却する
-func (s *Session) NeedLoginWhenPrivilegedAccess(c *gin.Context) bool {
+func (s *Session) NeedLoginWhenPrivilegedAccess() bool {
 	authenticateAt := s.AuthenticatedAt.In(locationJst)
 	if authenticateAt.Before(time.Now().Add(-time.Second * privilegedAccessLimitMinutes)) {
 		return true
