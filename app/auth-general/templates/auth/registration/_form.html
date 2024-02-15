@@ -1,7 +1,7 @@
 {{define "auth/registration/_form.html"}}
 <form 
   id="registration-form"
-  hx-post="/auth/registration?flow={{.RegistrationFlowID}}" 
+  hx-post="{{ .RoutePaths.AuthRegistration }}?flow={{.RegistrationFlowID}}" 
   hx-swap="outerHTML" 
   hx-target="this"
 >

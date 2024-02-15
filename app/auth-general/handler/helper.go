@@ -59,9 +59,12 @@ func setCookieToResponseHeader(w http.ResponseWriter, cookies []string) {
 
 func redirect(w http.ResponseWriter, r *http.Request, redirectTo string) {
 	if r.Header.Get("HX-Request") == "true" {
+		slog.Info("HX-Redirect")
 		w.Header().Set("HX-Redirect", redirectTo)
-		w.WriteHeader(http.StatusSeeOther)
+		// w.Header().Set("HX-Location", redirectTo)
+		// w.WriteHeader(http.StatusSeeOther)
 	} else {
+		slog.Info("Redirect")
 		http.Redirect(w, r, redirectTo, http.StatusSeeOther)
 	}
 }
@@ -72,7 +75,6 @@ func viewParameters(session *kratos.Session, r *http.Request, p map[string]any) 
 	params["Navbar"] = getNavbarviewParameters(session)
 	params["CurrentPath"] = r.URL.Path
 	params["RoutePaths"] = routePaths
-	params["TemplatePaths"] = templatePaths
 	return params
 }
 

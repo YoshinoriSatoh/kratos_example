@@ -8,7 +8,7 @@
 {{end}}
 <form 
   id="login-form"
-  hx-post="/auth/login?flow={{.LoginFlowID}}&return_to={{.ReturnTo}}" 
+  hx-post="{{ .RoutePaths.AuthLogin }}?flow={{.LoginFlowID}}&return_to={{.ReturnTo}}" 
   hx-swap="outerHTML" 
   hx-target="this"
   class="mb-4"

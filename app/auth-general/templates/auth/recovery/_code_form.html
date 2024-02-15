@@ -11,7 +11,7 @@
 
 <form 
   id="recovery-form"
-  hx-post="/auth/recovery/code?flow={{.RecoveryFlowID}}" 
+  hx-post="{{ .RoutePaths.AuthRecoveryCode }}?flow={{.RecoveryFlowID}}" 
   hx-swap="outerHTML" 
   hx-target="this"
 >

@@ -1,7 +1,7 @@
 {{define "my/password/_form.html"}}
 <form 
   id="password-form"
-  hx-post="/my/password?flow={{.SettingsFlowID}}" 
+  hx-post="{{ .RoutePaths.MyPassword }}?flow={{.SettingsFlowID}}" 
   hx-swap="outerHTML" 
   hx-target="this"
 >

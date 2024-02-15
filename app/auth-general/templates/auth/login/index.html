@@ -4,12 +4,13 @@
 <div class="container mx-auto px-24">
   <h2 class="text-lg text-center font-bold">ログイン</h2>
   <div class="text-right">
-    <a class="link text-blue-500 text-sm" href="/auth/registration">会員登録はこちら</a> 
+    <a class="link text-blue-500 text-sm" href="{{ .RoutePaths.AuthRegistration }}">会員登録はこちら</a> 
   </div>
+  
   {{template "auth/login/_form.html" .}}
 
   <div class="text-right">
-    <a class="link text-blue-500 text-sm" href="/auth/recovery">パスワードを忘れた場合はこちら</a> 
+    <a class="link text-blue-500 text-sm" href="{{ .RoutePaths.AuthRecovery }}">パスワードを忘れた場合はこちら</a> 
   </div>
 </div>
 

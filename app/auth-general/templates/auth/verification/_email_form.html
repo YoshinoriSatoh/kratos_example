@@ -1,7 +1,7 @@
 {{define "auth/verification/_email_form.html"}}
 <form 
   id="verification-form"
-  hx-post="/auth/verification/email?flow={{.VerificationFlowID}}" 
+  hx-post="{{ .RoutePaths.AuthVerificationEmail }}?flow={{.VerificationFlowID}}" 
   hx-swap="outerHTML" 
   hx-target="this"
 >
@@ -25,7 +25,7 @@
         {{else}}
         class="input input-bordered"
         {{end}}
-      >
+      />
       {{if .ValidationFieldError.Email}}
       <div class="text-sm text-red-700 my-2">{{.ValidationFieldError.Email}}</div>
       {{end}}

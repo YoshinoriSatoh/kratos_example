@@ -8,7 +8,7 @@
 </div>
 <form 
   id="verification-form" 
-  hx-post="/auth/verification/code?flow={{.VerificationFlowID}}"
+  hx-post="{{ .RoutePaths.AuthVerificationCode }}?flow={{.VerificationFlowID}}"
   hx-swap="outerHTML" 
   hx-target="this"
   > 
@@ -32,7 +32,7 @@
         {{else}}
         class="input input-bordered"
         {{end}}
-      >
+      />
       {{if .ValidationFieldError.Code}}
       <div class="text-sm text-red-700 my-2">{{.ValidationFieldError.Code}}</div>
       {{end}}

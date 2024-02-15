@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"reflect"
 
 	kratosclientgo "github.com/ory/kratos-client-go"
 )
@@ -91,29 +92,42 @@ func getErrorMessages(err error) []string {
 	slog.Info(fmt.Sprintf("%v", oerr.Model()))
 
 	var messages []string
+	fmt.Println(reflect.TypeOf(oerr.Model()))
 
 	if m, ok := oerr.Model().(kratosclientgo.RegistrationFlow); ok {
+		slog.Info("RegistrationFlow")
 		messages = getErrorMessagesFromResigtrationFlow(m)
 	}
 	if m, ok := oerr.Model().(kratosclientgo.VerificationFlow); ok {
+		slog.Info("VerificationFlow")
 		messages = getErrorMessagesFromVerificationFlow(m)
 	}
 	if m, ok := oerr.Model().(kratosclientgo.LoginFlow); ok {
+		slog.Info("LoginFlow")
 		messages = getErrorMessagesFromLoginFlow(m)
 	}
 	if m, ok := oerr.Model().(kratosclientgo.RecoveryFlow); ok {
+		slog.Info("RecoveryFlow")
 		messages = getErrorMessagesFromRecoveryFlow(m)
 	}
 	if m, ok := oerr.Model().(kratosclientgo.SettingsFlow); ok {
+		slog.Info("SettingsFlow")
 		messages = getErrorMessagesFromSettingsFlow(m)
 	}
 
 	if m, ok := oerr.Model().(kratosclientgo.ErrorBrowserLocationChangeRequired); ok {
+		slog.Info("ErrorBrowserLocationChangeRequired")
 		messages = getErrorMessagesFromBrowserLocationChangeRequired(m)
 	}
 
 	if m, ok := oerr.Model().(kratosclientgo.GenericError); ok {
+		slog.Info("GenericError")
 		messages = getErrorMessagesFromGenericError(m)
+	}
+
+	if m, ok := oerr.Model().(kratosclientgo.ErrorGeneric); ok {
+		slog.Info("GenericError")
+		messages = getErrorMessagesFromErrorGeneric(m)
 	}
 
 	return messages
@@ -168,9 +182,16 @@ func getErrorMessagesFromBrowserLocationChangeRequired(err kratosclientgo.ErrorB
 
 func getErrorMessagesFromGenericError(err kratosclientgo.GenericError) []string {
 	slog.Info("getErrorMessagesFromGenericError")
-	slog.Info("%v", err)
 	if err.Id != nil {
 		slog.Info(*err.Id)
+		if *err.Id == "security_csrf_violation" {
+			return []string{"恐れ入りますが、画面を更新してもう一度お試しください"}
+		}
 	}
 	return []string{err.Message}
+}
+
+func getErrorMessagesFromErrorGeneric(err kratosclientgo.ErrorGeneric) []string {
+	slog.Info("getErrorMessagesFromErrorGeneric")
+	return getErrorMessagesFromGenericError(err.Error)
 }

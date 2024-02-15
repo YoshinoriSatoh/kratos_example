@@ -1,7 +1,7 @@
 {{define "auth/recovery/_email_form.html"}}
 <form 
   id="recovery-form"
-  hx-post="/auth/recovery/email?flow={{.RecoveryFlowID}}" 
+  hx-post="{{ .RoutePaths.AuthRecoveryEmail }}?flow={{.RecoveryFlowID}}" 
   hx-swap="outerHTML" 
   hx-target="this"
 >

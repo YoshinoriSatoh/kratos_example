@@ -23,10 +23,10 @@
     <div class="flex flex-row space-x-4">
       {{ if and (ne .CurrentPath "/auth/login") (ne .CurrentPath "/auth/registration") }}
         <div>
-          <a href="/auth/login" class="text-sm">ログイン</a>
+          <a href="{{ .RoutePaths.AuthLogin }}" class="text-sm">ログイン</a>
         </div>
         <div>
-          <a href="/auth/registration" class="text-sm">会員登録</a>
+          <a href="{{ .RoutePaths.AuthRegistration }}" class="text-sm">会員登録</a>
         </div>
       {{end}}
     </div>

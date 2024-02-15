@@ -87,17 +87,17 @@ func (p *Provider) handlePostAuthRegistration(w http.ResponseWriter, r *http.Req
 		Password:             r.PostFormValue("password"),
 		PasswordConfirmation: r.PostFormValue("password-confirmation"),
 	}
-	// validationFieldErrors := reqParams.validate()
-	// if len(validationFieldErrors) > 0 {
-	// 	tmpl.ExecuteTemplate(w, templatePaths.AuthRegistration_Form, viewParameters(session, r, map[string]any{
-	// 		"RegistrationFlowID":   reqParams.FlowID,
-	// 		"CsrfToken":            reqParams.CsrfToken,
-	// 		"Email":                reqParams.Email,
-	// 		"Password":             reqParams.Password,
-	// 		"ValidationFieldError": validationFieldErrors,
-	// 	}))
-	// 	return
-	// }
+	validationFieldErrors := reqParams.validate()
+	if len(validationFieldErrors) > 0 {
+		tmpl.ExecuteTemplate(w, templatePaths.AuthRegistration_Form, viewParameters(session, r, map[string]any{
+			"RegistrationFlowID":   reqParams.FlowID,
+			"CsrfToken":            reqParams.CsrfToken,
+			"Email":                reqParams.Email,
+			"Password":             reqParams.Password,
+			"ValidationFieldError": validationFieldErrors,
+		}))
+		return
+	}
 
 	// Registration Flow 更新
 	output, err := p.d.Kratos.UpdateRegistrationFlow(kratos.UpdateRegistrationFlowInput{
@@ -122,7 +122,7 @@ func (p *Provider) handlePostAuthRegistration(w http.ResponseWriter, r *http.Req
 	setCookieToResponseHeader(w, output.Cookies)
 
 	// Registration flow成功時はVerification flowへリダイレクト
-	redirect(w, r, fmt.Sprintf("%s?flow=%s", routePaths.AuthRegistration, output.VerificationFlowID))
+	redirect(w, r, fmt.Sprintf("%s?flow=%s", routePaths.AuthVerificationCode, output.VerificationFlowID))
 	w.WriteHeader(http.StatusOK)
 }
 
