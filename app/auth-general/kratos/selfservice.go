@@ -104,11 +104,17 @@ func (p *Provider) CreateOrGetRegistrationFlow(i CreateOrGetRegistrationFlowInpu
 
 	output.FlowID = registrationFlow.Id
 
-	// flow の ui から csrf_token を取得
-	output.CsrfToken, err = getCsrfTokenFromFlowHttpResponse(response)
+	// SDKを使用しているので、本来は上記レスポンスの第一引数である
+	// *kratosclientgo.RegistrationFlow から csrf_token その他を取得するところだが、
+	// goのv1.0.0のSDKには不具合があるらしく、仕方ないのでhttp.Responseから取得している
+	// https://github.com/ory/sdk/issues/292
+	respBody, err := readHttpResponseBody(response)
 	if err != nil {
-		slog.Error("Get csrf_token from http response Error", "Response", response, "Error", err)
+		slog.Error(err.Error())
 		return output, err
+	}
+	if m, ok := respBody.(kratosclientgo.RegistrationFlow); ok {
+		output.CsrfToken = getCsrfTokenFromFlowUi(m.Ui)
 	}
 
 	// browser flowでは、kartosから受け取ったcookieをそのままブラウザへ返却する
@@ -153,16 +159,23 @@ func (p *Provider) UpdateRegistrationFlow(i UpdateRegistrationFlowInput) (Update
 		UpdateRegistrationFlowBody(updateRegistrationFlowBody).
 		Execute()
 	if err != nil {
-		slog.Error("UpdateRegistrationFlow Error", "Response", response, "Error", err)
+		slog.Error("UpdateError", "Response", response, "Error", err)
 		output.ErrorMessages = getErrorMessages(err)
 		return output, err
 	}
 	slog.Info("UpdateRegisrationFlow Succeed", "SuccessfulRegistration", successfulRegistration, "Response", response)
-	output.VerificationFlowID, err = getContinueWithVerificationUiFlowIdFromFlowHttpResponse(response)
+
+	// SDKを使用しているので、本来は上記レスポンスの第一引数である
+	// *kratosclientgo.SuccessfulNativeRegistration から必要な値を取得するところだが、
+	// goのv1.0.0のSDKには不具合があるらしく、仕方ないのでhttp.Responseから取得している
+	// https://github.com/ory/sdk/issues/292
+	respBody, err := readHttpResponseBody(response)
 	if err != nil {
-		slog.Error("UpdateRegistrationFlow Error", "Response", response, "Error", err)
-		output.ErrorMessages = []string{err.Error()}
+		slog.Error(err.Error())
 		return output, err
+	}
+	if s, ok := respBody.(kratosclientgo.SuccessfulNativeRegistration); ok {
+		output.VerificationFlowID = getContinueWithVerificationFlowId(s)
 	}
 
 	// browser flowでは、kartosから受け取ったcookieをそのままブラウザへ返却する
@@ -233,11 +246,17 @@ func (p *Provider) CreateOrGetVerificationFlow(i CreateOrGetVerificationFlowInpu
 		output.IsUsedFlow = true
 	}
 
-	// flow の ui から csrf_token を取得
-	output.CsrfToken, err = getCsrfTokenFromFlowHttpResponse(response)
+	// SDKを使用しているので、本来は上記レスポンスの第一引数である
+	// *kratosclientgo.VerificationFlow から必要な値を取得するところだが、
+	// goのv1.0.0のSDKには不具合があるらしく、仕方ないのでhttp.Responseから取得している
+	// https://github.com/ory/sdk/issues/292
+	respBody, err := readHttpResponseBody(response)
 	if err != nil {
 		slog.Error(err.Error())
 		return output, err
+	}
+	if m, ok := respBody.(kratosclientgo.VerificationFlow); ok {
+		output.CsrfToken = getCsrfTokenFromFlowUi(m.Ui)
 	}
 
 	// browser flowでは、kartosから受け取ったcookieをそのままブラウザへ返却する
@@ -368,11 +387,17 @@ func (p *Provider) CreateOrGetLoginFlow(i CreateOrGetLoginFlowInput) (CreateOrGe
 
 	output.FlowID = loginFlow.Id
 
-	// flow の ui から csrf_token を取得
-	output.CsrfToken, err = getCsrfTokenFromFlowHttpResponse(response)
+	// SDKを使用しているので、本来は上記レスポンスの第一引数である
+	// *kratosclientgo.LoginFlow から必要な値を取得するところだが、
+	// goのv1.0.0のSDKには不具合があるらしく、仕方ないのでhttp.Responseから取得している
+	// https://github.com/ory/sdk/issues/292
+	respBody, err := readHttpResponseBody(response)
 	if err != nil {
-		slog.Error("Get csrf_token from http response Error", "Response", response, "Error", err)
+		slog.Error(err.Error())
 		return output, err
+	}
+	if m, ok := respBody.(kratosclientgo.LoginFlow); ok {
+		output.CsrfToken = getCsrfTokenFromFlowUi(m.Ui)
 	}
 
 	// browser flowでは、kartosから受け取ったcookieをそのままブラウザへ返却する
@@ -520,13 +545,18 @@ func (p *Provider) CreateOrGetRecoveryFlow(i CreateOrGetRecoveryFlowInput) (Crea
 
 	output.FlowID = recoveryFlow.Id
 
-	// flow の ui から csrf_token を取得
-	output.CsrfToken, err = getCsrfTokenFromFlowHttpResponse(response)
+	// SDKを使用しているので、本来は上記レスポンスの第一引数である
+	// *kratosclientgo.RecoveryFlow から必要な値を取得するところだが、
+	// goのv1.0.0のSDKには不具合があるらしく、仕方ないのでhttp.Responseから取得している
+	// https://github.com/ory/sdk/issues/292
+	respBody, err := readHttpResponseBody(response)
 	if err != nil {
-		slog.Error("Get csrf_token from http response Error", "Response", response, "Error", err)
+		slog.Error(err.Error())
 		return output, err
 	}
-
+	if m, ok := respBody.(kratosclientgo.RecoveryFlow); ok {
+		output.CsrfToken = getCsrfTokenFromFlowUi(m.Ui)
+	}
 	// browser flowでは、kartosから受け取ったcookieをそのままブラウザへ返却する
 	output.Cookies = response.Header["Set-Cookie"]
 
@@ -588,8 +618,19 @@ func (p *Provider) UpdateRecoveryFlow(i UpdateRecoveryFlowInput) (UpdateRecovery
 		slog.Error("Update Recovery Flow Error", "RecoveryFlow", recoveryFlow, "Response", response, "Error", err)
 		// browser location changeが返却された場合は、リダイレクト先URLを設定
 		if response.StatusCode == 422 {
+			// SDKを使用しているので、本来は上記レスポンスの第一引数である
+			// *kratosclientgo.ErrorBrowserLocationChangeRequired から必要な値を取得するところだが、
+			// goのv1.0.0のSDKには不具合があるらしく、仕方ないのでhttp.Responseから取得している
+			// https://github.com/ory/sdk/issues/292
+			respBody, err := readHttpResponseBody(response)
+			if err != nil {
+				slog.Error(err.Error())
+				return output, err
+			}
+			if err, ok := respBody.(kratosclientgo.ErrorBrowserLocationChangeRequired); ok {
+				output.RedirectBrowserTo = getRedirectBrowserToFromError(err)
+			}
 			output.Cookies = response.Header["Set-Cookie"]
-			output.RedirectBrowserTo, _ = getRedirectBrowserToFromFlowHttpResponse(response)
 		} else {
 			output.ErrorMessages = getErrorMessages(err)
 		}
@@ -660,11 +701,17 @@ func (p *Provider) CreateOrGetSettingsFlow(i CreateOrGetSettingsFlowInput) (Crea
 
 	output.FlowID = settingsFlow.Id
 
-	// flow の ui から csrf_token を取得
-	output.CsrfToken, err = getCsrfTokenFromFlowHttpResponse(response)
+	// SDKを使用しているので、本来は上記レスポンスの第一引数である
+	// *kratosclientgo.SettingsFlow から必要な値を取得するところだが、
+	// goのv1.0.0のSDKには不具合があるらしく、仕方ないのでhttp.Responseから取得している
+	// https://github.com/ory/sdk/issues/292
+	respBody, err := readHttpResponseBody(response)
 	if err != nil {
 		slog.Error(err.Error())
 		return output, err
+	}
+	if m, ok := respBody.(kratosclientgo.SettingsFlow); ok {
+		output.CsrfToken = getCsrfTokenFromFlowUi(m.Ui)
 	}
 
 	// browser flowでは、kartosから受け取ったcookieをそのままブラウザへ返却する

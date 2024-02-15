@@ -11,76 +11,52 @@ import (
 	kratosclientgo "github.com/ory/kratos-client-go"
 )
 
+func readHttpResponseBody(r *http.Response) (interface{}, error) {
+	defer r.Body.Close()
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		slog.Error(err.Error())
+		return []byte{}, err
+	}
+
+	var result interface{}
+	if err := json.Unmarshal(body, &result); err != nil {
+		slog.Error(err.Error())
+		return []byte{}, err
+	}
+	return body, nil
+}
+
 // flow の ui から csrf_token を取得
-// SDKを使用しているので、本来は上記レスポンスの第一引数である registrationFlow *kratosclientgo.RegistrationFlow から取得するところだが、
-// goのv1.0.0のSDKには不具合があるらしく、仕方ないのでhttp.Responseから取得している
-// https://github.com/ory/sdk/issues/292
-func getCsrfTokenFromFlowHttpResponse(r *http.Response) (string, error) {
-	defer r.Body.Close()
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		slog.Error(err.Error())
-		return "", err
-	}
-
-	var result interface{}
-	if err := json.Unmarshal(body, &result); err != nil {
-		slog.Error(err.Error())
-		return "", err
-	}
-
-	var csrfToken string
-	for _, node := range result.(map[string]interface{})["ui"].(map[string]interface{})["nodes"].([]interface{}) {
-		attrName := node.(map[string]interface{})["attributes"].(map[string]interface{})["name"]
-		if attrName != nil && attrName.(string) == "csrf_token" {
-			csrfToken = node.(map[string]interface{})["attributes"].(map[string]interface{})["value"].(string)
-			break
+func getCsrfTokenFromFlowUi(ui kratosclientgo.UiContainer) string {
+	for _, node := range ui.Nodes {
+		if node.Attributes.UiNodeInputAttributes.Name == "csrf_token" {
+			return node.Attributes.UiNodeInputAttributes.Value.(string)
 		}
 	}
-	slog.Info(csrfToken)
-	return csrfToken, nil
+	return ""
 }
 
-func getContinueWithVerificationUiFlowIdFromFlowHttpResponse(r *http.Response) (string, error) {
-	defer r.Body.Close()
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		slog.Error(err.Error())
-		return "", err
-	}
-
-	var result interface{}
-	if err := json.Unmarshal(body, &result); err != nil {
-		slog.Error(err.Error())
-		return "", err
-	}
-
-	var verificationFlowID string
-	for _, continueWith := range result.(map[string]interface{})["continue_with"].([]interface{}) {
-		if continueWith.(map[string]interface{})["action"].(string) == "show_verification_ui" {
-			verificationFlowID = continueWith.(map[string]interface{})["flow"].(map[string]interface{})["id"].(string)
-			break
+// SuccessfulRegistration から verification flow id を取得
+func getContinueWithVerificationFlowId(sr kratosclientgo.SuccessfulNativeRegistration) string {
+	for _, continueWith := range sr.ContinueWith {
+		if continueWith.ContinueWithVerificationUi.Action == "show_verification_ui" {
+			return continueWith.ContinueWithVerificationUi.Flow.Id
 		}
 	}
-	slog.Info(verificationFlowID)
-	return verificationFlowID, nil
+	return ""
 }
 
-func getRedirectBrowserToFromFlowHttpResponse(r *http.Response) (string, error) {
-	defer r.Body.Close()
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		slog.Error(err.Error())
-		return "", err
+// refirect browser to を取得
+func getRedirectBrowserToFromError(err kratosclientgo.ErrorBrowserLocationChangeRequired) string {
+	if err.RedirectBrowserTo == nil {
+		return ""
+	} else {
+		return *err.RedirectBrowserTo
 	}
-
-	var result interface{}
-	if err := json.Unmarshal(body, &result); err != nil {
-		slog.Error(err.Error())
-	}
-	return result.(map[string]interface{})["redirect_browser_to"].(string), nil
 }
 
+// kratos のエラーレスポンスからエラーメッセージを取得
 func getErrorMessages(err error) []string {
 	slog.Info(fmt.Sprintf("%v", err))
 	oerr, ok := err.(*kratosclientgo.GenericOpenAPIError)
@@ -163,7 +139,7 @@ func getErrorMessagesFromUi(ui kratosclientgo.UiContainer) []string {
 		if v.Type == "error" {
 			slog.Info(fmt.Sprintf("%v", v.Id))
 			slog.Info(fmt.Sprintf("%v", v.Text))
-			// [TODO] ここは日本語化しないといけない
+			// [TODO] 日本語化
 			// https://www.ory.sh/docs/kratos/concepts/ui-user-interface#machine-readable-format
 			if v.Id == 4000007 {
 				messages = append(messages, "既に登録済みメールアドレスメールです")
@@ -184,6 +160,8 @@ func getErrorMessagesFromGenericError(err kratosclientgo.GenericError) []string 
 	slog.Info("getErrorMessagesFromGenericError")
 	if err.Id != nil {
 		slog.Info(*err.Id)
+		// [TODO] 日本語化
+		// https://www.ory.sh/docs/kratos/concepts/ui-user-interface#ui-error-codes
 		if *err.Id == "security_csrf_violation" {
 			return []string{"恐れ入りますが、画面を更新してもう一度お試しください"}
 		}

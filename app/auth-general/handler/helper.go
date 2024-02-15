@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
 	"kratos_example/kratos"
 	"log/slog"
 	"net/http"
@@ -15,7 +14,6 @@ func getSession(ctx context.Context) *kratos.Session {
 	if session == nil {
 		return nil
 	}
-	slog.Info(fmt.Sprintf("%v", session))
 
 	kratosSession, _ := session.(*kratos.Session)
 	return kratosSession
@@ -47,7 +45,6 @@ func validationFieldErrors(err error) map[string]string {
 	for _, err := range err.(validator.ValidationErrors) {
 		fieldsErrors[err.StructField()] = err.Translate(trans)
 	}
-	slog.Info(fmt.Sprintf("%v", fieldsErrors))
 	return fieldsErrors
 }
 
@@ -88,27 +85,3 @@ func getNavbarviewParameters(session *kratos.Session) map[string]any {
 		"Nickname": nickname,
 	}
 }
-
-// // ------------------------- Settings profile edit view paremeter -------------------------
-// type myProfileEditViewParams struct {
-// 	FlowID    string `json:"flow_id"`
-// 	Email     string `json:"email"`
-// 	Nickname  string `json:"nickname"`
-// 	Birthdate string `json:"birthdate"`
-// }
-
-// func mergeMyProfileEditViewParams(params myProfileEditViewParams, session *kratos.Session) myProfileEditViewParams {
-// 	if session != nil {
-// 		if params.Email == "" {
-// 			params.Email = session.GetValueFromTraits("email")
-// 		}
-// 		if params.Nickname == "" {
-// 			params.Nickname = session.GetValueFromTraits("nickname")
-// 		}
-// 		if params.Birthdate == "" {
-// 			params.Birthdate = session.GetValueFromTraits("birthdate")
-// 		}
-// 	}
-// 	slog.Info(fmt.Sprintf("%v", params))
-// 	return params
-// }

@@ -108,22 +108,16 @@ func (p *Provider) loggingRquest(next http.Handler) http.Handler {
 
 func (p *Provider) setSession(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		slog.Info("setSession")
 		ctx := r.Context()
 		output, err := p.d.Kratos.ToSession(kratos.ToSessionInput{
 			Cookie: r.Header.Get("Cookie"),
 		})
 		if err != nil {
-			slog.Info("setSession error")
-			slog.Info(err.Error())
-			slog.Info(fmt.Sprintf("%v", output.ErrorMessages))
 			ctx = context.WithValue(ctx, "session", nil)
 			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}
 		ctx = context.WithValue(ctx, "session", output.Session)
-		session := getSession(ctx)
-		slog.Info(fmt.Sprintf("%v", session))
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

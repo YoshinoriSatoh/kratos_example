@@ -19,10 +19,12 @@ type handleGetAuthRegistrationdRequestParams struct {
 func (p *Provider) handleGetAuthRegistration(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	session := getSession(ctx)
+
 	reqParams := handleGetAuthRegistrationdRequestParams{
 		cookie: r.Header.Get("Cookie"),
 		flowID: r.URL.Query().Get("flow"),
 	}
+	slog.Debug("reqParams", "cookie", reqParams.cookie, "flowID", reqParams.flowID)
 
 	// Registration Flow の作成 or 取得
 	// Registration flowを新規作成した場合は、FlowIDを含めてリダイレクト
