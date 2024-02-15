@@ -111,6 +111,8 @@ services:
     command: air
     ports:
       - 3000:3000
+    environment:
+      TERM: xterm-256color
     working_dir: /root/app
     cap_add:
       - SYS_PTRACE
@@ -125,6 +127,9 @@ services:
         target: /root/tmp
         volume:
           nocopy: true
+      - type: bind
+        source: ./.bashrc
+        target: /root/.bashrc
 
 volumes:
   db_kratos_general_data:

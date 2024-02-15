@@ -1,7 +1,7 @@
-{{define "settings/profile/_form.html"}}
+{{define "my/profile/_form.html"}}
 <form 
-  id="settings-form"
-  hx-post="/settings/profile?flow={{.SettingsFlowID}}" 
+  id="profile-form"
+  hx-post="/my/profile?flow={{.SettingsFlowID}}" 
   hx-swap="outerHTML" 
   hx-target="this"
 >
@@ -35,7 +35,7 @@
         value="{{.Nickname}}"
         class="input input-bordered"
       />
-      <div class="text-red-500 text-xs">{{.ValidationError.Nickname}}</div>
+      <div class="text-red-500 text-xs">{{.ValidationFieldError.Nickname}}</div>
     </label>
 
     <label class="form-control">
@@ -49,7 +49,7 @@
         value="{{.Birthdate}}"
         class="input input-bordered"
       />
-      <div class="text-red-500 text-xs">{{.ValidationError.Birthdate}}</div>
+      <div class="text-red-500 text-xs">{{.ValidationFieldError.Birthdate}}</div>
     </label>
   </div>
 

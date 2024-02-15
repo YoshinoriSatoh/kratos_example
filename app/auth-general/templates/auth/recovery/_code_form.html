@@ -1,4 +1,4 @@
-{{define "recovery/_code_form.html"}}
+{{define "auth/recovery/_code_form.html"}}
 {{ if eq .ShowRecoveryAnnouncement true }}
 <div class="alert alert-info mt-2">
   <div>
@@ -11,7 +11,7 @@
 
 <form 
   id="recovery-form"
-  hx-post="/recovery/code?flow={{.RecoveryFlowID}}" 
+  hx-post="/auth/recovery/code?flow={{.RecoveryFlowID}}" 
   hx-swap="outerHTML" 
   hx-target="this"
 >

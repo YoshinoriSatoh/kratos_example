@@ -1,6 +1,6 @@
 {{define "_alert.html"}}
 
-{{ if ne .ErrorMessage nil }}
+{{ if and (ne .ErrorMessages nil) (gt (len .ErrorMessages) 0) }}
   {{ $length := len .ErrorMessages }}
   {{ if gt $length 0 }}
     {{ range .ErrorMessages }}

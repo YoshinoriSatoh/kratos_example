@@ -1,4 +1,4 @@
-{{define "settings/profile/edit.html"}}
+{{define "my/profile/edit.html"}}
 {{template "layout/_header.html" .}}
 
 <div class="container mx-auto px-24">
@@ -6,7 +6,7 @@
   {{if ne .Infomation ""}}
   <div class="alert alert-info mt-2">{{.Infomation}}</div>
   {{end}}
-  {{template "settings/profile/_form.html" .}}
+  {{template "my/profile/_form.html" .}}
 </div>
   
 {{template "layout/_footer.html" .}}

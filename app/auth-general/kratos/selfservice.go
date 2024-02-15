@@ -30,14 +30,13 @@ type ToSessionOutput struct {
 
 func (p *Provider) ToSession(i ToSessionInput) (ToSessionOutput, error) {
 	var output ToSessionOutput
-	slog.Info("ToSession", "Cookie", i.Cookie)
 	session, response, err := p.kratosPublicClient.FrontendApi.
 		ToSession(context.Background()).
 		Cookie(i.Cookie).
 		Execute()
 	if err != nil {
 		slog.Info("Unauthorized", "Response", response, "Error", err)
-		output.ErrorMessages = getErrorMessagesFromFlowHttpResponse(response)
+		output.ErrorMessages = getErrorMessages(err)
 		return output, err
 	}
 
@@ -82,7 +81,7 @@ func (p *Provider) CreateOrGetRegistrationFlow(i CreateOrGetRegistrationFlowInpu
 			Execute()
 		if err != nil {
 			slog.Error("CreateRegistrationFlow Error", "RegistrationFlow", registrationFlow, "Response", response, "Error", err)
-			output.ErrorMessages = getErrorMessagesFromFlowHttpResponse(response)
+			output.ErrorMessages = getErrorMessages(err)
 			return output, err
 		}
 		slog.Info("CreateRegistrationFlow Succeed", "RegistrationFlow", registrationFlow, "Response", response)
@@ -97,7 +96,7 @@ func (p *Provider) CreateOrGetRegistrationFlow(i CreateOrGetRegistrationFlowInpu
 			Execute()
 		if err != nil {
 			slog.Error("GetRegistrationFlow Error", "RegistrationFlow", registrationFlow, "Response", response, "Error", err)
-			output.ErrorMessages = getErrorMessagesFromFlowHttpResponse(response)
+			output.ErrorMessages = getErrorMessages(err)
 			return output, err
 		}
 		slog.Info("GetRegisrationFlow Succeed", "RegistrationFlow", registrationFlow, "Response", response)
@@ -155,11 +154,10 @@ func (p *Provider) UpdateRegistrationFlow(i UpdateRegistrationFlowInput) (Update
 		Execute()
 	if err != nil {
 		slog.Error("UpdateRegistrationFlow Error", "Response", response, "Error", err)
-		output.ErrorMessages = getErrorMessagesFromFlowHttpResponse(response)
+		output.ErrorMessages = getErrorMessages(err)
 		return output, err
 	}
 	slog.Info("UpdateRegisrationFlow Succeed", "SuccessfulRegistration", successfulRegistration, "Response", response)
-
 	output.VerificationFlowID, err = getContinueWithVerificationUiFlowIdFromFlowHttpResponse(response)
 	if err != nil {
 		slog.Error("UpdateRegistrationFlow Error", "Response", response, "Error", err)
@@ -207,7 +205,7 @@ func (p *Provider) CreateOrGetVerificationFlow(i CreateOrGetVerificationFlowInpu
 			Execute()
 		if err != nil {
 			slog.Error("CreateVerificationFlow Error", "VerificationFlow", verificationFlow, "Response", response, "Error", err)
-			output.ErrorMessages = getErrorMessagesFromFlowHttpResponse(response)
+			output.ErrorMessages = getErrorMessages(err)
 			return output, err
 		}
 		slog.Info("CreateVerificationFlow Succeed", "VerificationFlow", verificationFlow, "Response", response)
@@ -222,7 +220,7 @@ func (p *Provider) CreateOrGetVerificationFlow(i CreateOrGetVerificationFlowInpu
 			Execute()
 		if err != nil {
 			slog.Error("Get Verification Flow Error", "VerificationFlow", verificationFlow, "Response", response, "Error", err)
-			output.ErrorMessages = getErrorMessagesFromFlowHttpResponse(response)
+			output.ErrorMessages = getErrorMessages(err)
 			return output, err
 		}
 		slog.Info("GetVerificationFlow Succeed", "VerificationFlow", verificationFlow, "Response", response)
@@ -300,7 +298,7 @@ func (p *Provider) UpdateVerificationFlow(i UpdateVerificationFlowInput) (Update
 		Execute()
 	if err != nil {
 		slog.Error("UpdateVerificationFlow Error", "Response", response, "Error", err)
-		output.ErrorMessages = getErrorMessagesFromFlowHttpResponse(response)
+		output.ErrorMessages = getErrorMessages(err)
 		return output, nil
 	}
 	slog.Info("UpdateVerification Succeed", "SuccessfulVerification", successfulVerification, "Response", response)
@@ -347,7 +345,7 @@ func (p *Provider) CreateOrGetLoginFlow(i CreateOrGetLoginFlowInput) (CreateOrGe
 			Execute()
 		if err != nil {
 			slog.Error("CreateLoginFlow Error", "LoginFlow", loginFlow, "Response", response, "Error", err)
-			output.ErrorMessages = getErrorMessagesFromFlowHttpResponse(response)
+			output.ErrorMessages = getErrorMessages(err)
 			return output, err
 		}
 		slog.Info("CreateLoginFlow Succeed", "LoginFlow", loginFlow, "Response", response)
@@ -362,7 +360,7 @@ func (p *Provider) CreateOrGetLoginFlow(i CreateOrGetLoginFlowInput) (CreateOrGe
 			Execute()
 		if err != nil {
 			slog.Error("GetLoginFlow Error", "LoginFlow", loginFlow, "Response", response, "Error", err)
-			output.ErrorMessages = getErrorMessagesFromFlowHttpResponse(response)
+			output.ErrorMessages = getErrorMessages(err)
 			return output, err
 		}
 		slog.Info("GetLoginFlow Succeed", "LoginFlow", loginFlow, "Response", response)
@@ -416,7 +414,7 @@ func (p *Provider) UpdateLoginFlow(i UpdateLoginFlowInput) (UpdateLoginFlowOutpu
 		Execute()
 	if err != nil {
 		slog.Error("Update Login Flow Error", "Response", response, "Error", err)
-		output.ErrorMessages = getErrorMessagesFromFlowHttpResponse(response)
+		output.ErrorMessages = getErrorMessages(err)
 		return output, err
 	}
 	slog.Info("UpdateLoginFlow Succeed", "SuccessfulLogin", successfulLogin, "Response", response)
@@ -446,7 +444,7 @@ func (p *Provider) Logout(i LogoutFlowInput) (LogoutFlowOutput, error) {
 		Execute()
 	if err != nil {
 		slog.Error("CreateLogoutFlow Error", "LogoutFlow", logoutFlow, "Response", response, "Error", err)
-		output.ErrorMessages = getErrorMessagesFromFlowHttpResponse(response)
+		output.ErrorMessages = getErrorMessages(err)
 		return output, err
 	}
 
@@ -458,7 +456,7 @@ func (p *Provider) Logout(i LogoutFlowInput) (LogoutFlowOutput, error) {
 		Execute()
 	if err != nil {
 		slog.Error("UpdateLogout Flow Error", "Response", response, "Error", err)
-		output.ErrorMessages = getErrorMessagesFromFlowHttpResponse(response)
+		output.ErrorMessages = getErrorMessages(err)
 		return output, err
 	}
 	slog.Info("UpdateLoginFlow Succeed", "Response", response)
@@ -499,7 +497,7 @@ func (p *Provider) CreateOrGetRecoveryFlow(i CreateOrGetRecoveryFlowInput) (Crea
 			Execute()
 		if err != nil {
 			slog.Error("CreateRecoveryFlow Error", "RecoveryFlow", recoveryFlow, "Response", response, "Error", err)
-			output.ErrorMessages = getErrorMessagesFromFlowHttpResponse(response)
+			output.ErrorMessages = getErrorMessages(err)
 			return output, err
 		}
 		slog.Info("CreateRecoveryFlo Succeed", "RecoveryFlow", recoveryFlow, "Response", response)
@@ -514,7 +512,7 @@ func (p *Provider) CreateOrGetRecoveryFlow(i CreateOrGetRecoveryFlowInput) (Crea
 			Execute()
 		if err != nil {
 			slog.Error("GetRecoveryFlow Error", "RecoveryFlow", recoveryFlow, "Response", response, "Error", err)
-			output.ErrorMessages = getErrorMessagesFromFlowHttpResponse(response)
+			output.ErrorMessages = getErrorMessages(err)
 			return output, err
 		}
 		slog.Info("GetRecoveryFlow Succeed", "RecoveryFlow", recoveryFlow, "Response", response)
@@ -593,7 +591,7 @@ func (p *Provider) UpdateRecoveryFlow(i UpdateRecoveryFlowInput) (UpdateRecovery
 			output.Cookies = response.Header["Set-Cookie"]
 			output.RedirectBrowserTo, _ = getRedirectBrowserToFromFlowHttpResponse(response)
 		} else {
-			output.ErrorMessages = getErrorMessagesFromFlowHttpResponse(response)
+			output.ErrorMessages = getErrorMessages(err)
 		}
 		return output, err
 	}
@@ -639,7 +637,7 @@ func (p *Provider) CreateOrGetSettingsFlow(i CreateOrGetSettingsFlowInput) (Crea
 			Execute()
 		if err != nil {
 			slog.Error("CreateSettingsFlow Error", "SettingsFlow", settingsFlow, "Response", response, "Error", err)
-			output.ErrorMessages = getErrorMessagesFromFlowHttpResponse(response)
+			output.ErrorMessages = getErrorMessages(err)
 			return output, err
 		}
 		slog.Info("CreateSettingsFlow Succeed", "SettingsFlow", settingsFlow, "Response", response)
@@ -654,7 +652,7 @@ func (p *Provider) CreateOrGetSettingsFlow(i CreateOrGetSettingsFlowInput) (Crea
 			Execute()
 		if err != nil {
 			slog.Error("GetSettingsFlow Error", "SettingsFlow", settingsFlow, "Response", response, "Error", err)
-			output.ErrorMessages = getErrorMessagesFromFlowHttpResponse(response)
+			output.ErrorMessages = getErrorMessages(err)
 			return output, err
 		}
 		slog.Info("GetSettingsFlow Succeed", "SettingsFlow", settingsFlow, "Response", response)
@@ -709,7 +707,7 @@ func (p *Provider) UpdateSettingsFlowPassword(i UpdateSettingsFlowPasswordInput)
 		Execute()
 	if err != nil {
 		slog.Error("Update Settings Flow Error", "Response", response, "Error", err)
-		output.ErrorMessages = getErrorMessagesFromFlowHttpResponse(response)
+		output.ErrorMessages = getErrorMessages(err)
 		return output, err
 	}
 	slog.Info("UpdateSettings Succeed", "SuccessfulSettings", successfulSettings, "Response", response)
@@ -754,7 +752,7 @@ func (p *Provider) UpdateSettingsFlowProfile(i UpdateSettingsFlowProfileInput) (
 		Execute()
 	if err != nil {
 		slog.Error("Update Settings Flow Error", "Response", response, "Error", err)
-		output.ErrorMessages = getErrorMessagesFromFlowHttpResponse(response)
+		output.ErrorMessages = getErrorMessages(err)
 		return output, err
 	}
 	slog.Info("UpdateSettings Succeed", "SuccessfulSettings", successfulSettings, "Response", response)

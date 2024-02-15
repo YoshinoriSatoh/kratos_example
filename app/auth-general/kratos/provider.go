@@ -1,9 +1,6 @@
 package kratos
 
 import (
-	"log/slog"
-	"os"
-
 	kratosclientgo "github.com/ory/kratos-client-go"
 )
 
@@ -20,8 +17,6 @@ type NewInput struct {
 }
 
 func New(i NewInput, d Dependencies) (*Provider, error) {
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{AddSource: true})))
-
 	p := Provider{
 		d: d,
 	}

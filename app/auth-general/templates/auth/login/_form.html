@@ -1,4 +1,4 @@
-{{define "login/_form.html"}}
+{{define "auth/login/_form.html"}}
 {{ if and (ne .Information "") (ne .Information nil) }}
 <div class="alert alert-info my-2">
   <div>
@@ -8,7 +8,7 @@
 {{end}}
 <form 
   id="login-form"
-  hx-post="/login?flow={{.LoginFlowID}}&return_to={{.ReturnTo}}" 
+  hx-post="/auth/login?flow={{.LoginFlowID}}&return_to={{.ReturnTo}}" 
   hx-swap="outerHTML" 
   hx-target="this"
   class="mb-4"

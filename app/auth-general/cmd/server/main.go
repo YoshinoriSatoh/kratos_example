@@ -23,7 +23,12 @@ func init() {
 	})
 
 	handler.Init(handler.InitInput{
-		GeneralEndpoint: "http://localhost:3000",
+		CookieParams: handler.CookieParams{
+			SessionCookieName: "kratos_general_session",
+			Path:              "/",
+			Domain:            "localhost",
+			Secure:            false,
+		},
 	})
 
 	// Create package providers with dependencies
@@ -51,19 +56,7 @@ func init() {
 }
 
 func main() {
-	// e := gin.New()
-	// e.Use(gin.LoggerWithConfig(gin.LoggerConfig{
-	// 	SkipPaths: []string{"/public/health"},
-	// }))
-	// e.Use(gin.Recovery())
-
-	// e.SetHTMLTemplate(templateList)
-	// e.Static("/static", "./static")
-
 	mux := http.NewServeMux()
-	// mux.HandleFunc("GET /static", func(w http.ResponseWriter, r *http.Request) {
-	// 	http.ServeFile(w, r, "/static")
-	// })
 	mux = handlerProvider.RegisterHandles(mux)
 
 	if err := http.ListenAndServe(":3000", mux); err != nil {

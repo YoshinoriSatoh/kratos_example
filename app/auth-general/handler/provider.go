@@ -6,8 +6,8 @@ import (
 	"kratos_example/kratos"
 	"log/slog"
 	"net/http"
-	"os"
 	"slices"
+	"strings"
 )
 
 type Provider struct {
@@ -21,66 +21,89 @@ type Dependencies struct {
 type NewInput struct{}
 
 func New(i NewInput, d Dependencies) (*Provider, error) {
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{AddSource: true})))
-
 	p := Provider{
 		d: d,
 	}
-
 	return &p, nil
 }
 
-func (p *Provider) baseMiddleware(hendler http.HandlerFunc) http.Handler {
-	return p.setSession(
-		p.redirectIfExistsTraitsFieldsNotFilledIn(hendler),
+func (p *Provider) RegisterHandles(mux *http.ServeMux) *http.ServeMux {
+	// Static files
+	fileServer := http.StripPrefix("/static/", http.FileServer(http.Dir("static")))
+	mux.HandleFunc("GET /static/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/static/") {
+			fileServer.ServeHTTP(w, r)
+		} else {
+			http.NotFound(w, r)
+		}
+	}))
+
+	// health check
+	mux.Handle("GET /health", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	// Authentication Registration
+	mux.Handle(fmt.Sprintf("GET %s", routePaths.AuthRegistration), p.baseMiddleware(p.handleGetAuthRegistration))
+	mux.Handle(fmt.Sprintf("POST %s", routePaths.AuthRegistration), p.baseMiddleware(p.handlePostAuthRegistration))
+
+	// Authentication Verification
+	mux.Handle(fmt.Sprintf("GET %s", routePaths.AuthVerification), p.baseMiddleware(p.handleGetAuthVerification))
+	mux.Handle(fmt.Sprintf("GET %s", routePaths.AuthVerificationCode), p.baseMiddleware(p.handleGetAuthVerificationCode))
+	mux.Handle(fmt.Sprintf("POST %s", routePaths.AuthVerificationEmail), p.baseMiddleware(p.handlePostVerificationEmail))
+	mux.Handle(fmt.Sprintf("POST %s", routePaths.AuthVerificationCode), p.baseMiddleware(p.handlePostVerificationCode))
+
+	// Authentication Login
+	mux.Handle(fmt.Sprintf("GET %s", routePaths.AuthLogin), p.baseMiddleware(p.handleGetAuthLogin))
+	mux.Handle(fmt.Sprintf("POST %s", routePaths.AuthLogin), p.baseMiddleware(p.handlePostAuthLogin))
+
+	// Authentication Logout
+	mux.Handle(fmt.Sprintf("POST %s", routePaths.AuthLogout), p.baseMiddleware(p.handlePostAuthLogout))
+
+	// Authentication Recovery
+	mux.Handle(fmt.Sprintf("GET %s", routePaths.AuthRecovery), p.baseMiddleware(p.handleGetAuthRecovery))
+	mux.Handle(fmt.Sprintf("POST %s", routePaths.AuthRecoveryEmail), p.baseMiddleware(p.handlePostAuthRecoveryEmail))
+	mux.Handle(fmt.Sprintf("POST %s", routePaths.AuthRecoveryCode), p.baseMiddleware(p.handlePostAuthRecoveryCode))
+
+	// My Password
+	mux.Handle(fmt.Sprintf("GET %s", routePaths.MyPassword), p.settingsMiddleware(p.handleGetMyPassword))
+	mux.Handle(fmt.Sprintf("POST %s", routePaths.MyPassword), p.settingsMiddleware(p.handlePostMyPassword))
+
+	// My Profile
+	mux.Handle(fmt.Sprintf("GET %s", routePaths.MyProfile), p.settingsMiddleware(p.handleGetMyProfile))
+	mux.Handle(fmt.Sprintf("GET %s", routePaths.MyProfileEdit), p.settingsMiddleware(p.handleGetMyProfileEdit))
+	mux.Handle(fmt.Sprintf("GET %s", routePaths.MyProfileForm), p.settingsMiddleware(p.handleGetMyProfileForm))
+	mux.Handle(fmt.Sprintf("POST %s", routePaths.MyProfile), p.settingsMiddleware(p.handlePostMyProfile))
+
+	// Top
+	mux.Handle(fmt.Sprintf("GET %s", routePaths.Top), p.baseMiddleware(p.handleGetTop))
+
+	// Item
+	mux.Handle(fmt.Sprintf("GET %s", routePaths.Item), p.baseMiddleware(p.handleGetItemDetail))
+
+	return mux
+}
+
+func (p *Provider) baseMiddleware(handler http.HandlerFunc) http.Handler {
+	return p.loggingRquest(
+		p.setSession(handler),
 	)
 }
 
-func (p *Provider) settingsMiddleware(hendler http.HandlerFunc) http.Handler {
-	return p.setSession(
-		p.redirectIfExistsTraitsFieldsNotFilledIn(
-			p.requireAuthenticated(hendler),
+func (p *Provider) settingsMiddleware(handler http.HandlerFunc) http.Handler {
+	return p.loggingRquest(
+		p.setSession(
+			p.redirectIfExistsTraitsFieldsNotFilledIn(handler),
 		),
 	)
 }
 
-func (p *Provider) RegisterHandles(mux *http.ServeMux) *http.ServeMux {
-	mux.Handle("GET /public/health", p.baseMiddleware(p.handleGetHealth))
-
-	// // Registration
-	mux.Handle("GET /registration", p.baseMiddleware(p.handleGetRegistration))
-	mux.Handle("POST /registration", p.baseMiddleware(p.handlePostRegistration))
-
-	// // Verification
-	mux.Handle("GET /verification", p.baseMiddleware(p.handleGetVerification))
-	mux.Handle("GET /verification/code", p.baseMiddleware(p.handleGetVerificationCode))
-	mux.Handle("POST /verification/email", p.baseMiddleware(p.handlePostVerificationEmail))
-	mux.Handle("POST /verification/code", p.baseMiddleware(p.handlePostVerificationCode))
-
-	// Login
-	mux.Handle("GET /login", p.baseMiddleware(p.handleGetLogin))
-	mux.Handle("POST /login", p.baseMiddleware(p.handlePostLogin))
-
-	// Logout
-	mux.Handle("POST /logout", p.baseMiddleware(p.handlePostLogout))
-
-	// Recovery
-	mux.Handle("GET /recovery", p.baseMiddleware(p.handleGetRecovery))
-	mux.Handle("POST /recovery/email", p.baseMiddleware(p.handlePostRecoveryEmail))
-	mux.Handle("POST /recovery/code", p.baseMiddleware(p.handlePostRecoveryCode))
-
-	// Settings
-	mux.Handle("GET /settings/password", p.settingsMiddleware(p.handleGetPasswordSettings))
-	mux.Handle("POST /settings/password", p.settingsMiddleware(p.handlePostSettingsPassword))
-	mux.Handle("GET /settings/profile", p.settingsMiddleware(p.handleGetSettingsProfile))
-	mux.Handle("GET /settings/profile/edit", p.settingsMiddleware(p.handleGetSettingsProfileEdit))
-	mux.Handle("GET /settings/profile/_form", p.settingsMiddleware(p.handleGetSettingsProfileForm))
-	mux.Handle("POST /settings/profile", p.settingsMiddleware(p.handlePostSettingsProfile))
-
-	mux.Handle("GET /", p.baseMiddleware(p.handleGetHome))
-	mux.Handle("GET /item/{id}", p.baseMiddleware(p.handleGetItemDetail))
-
-	return mux
+func (p *Provider) loggingRquest(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		slog.Info(fmt.Sprintf("[Request] %s %s", r.Method, r.URL.Path))
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
 
 func (p *Provider) setSession(next http.Handler) http.Handler {
@@ -93,6 +116,7 @@ func (p *Provider) setSession(next http.Handler) http.Handler {
 		if err != nil {
 			slog.Info("setSession error")
 			slog.Info(err.Error())
+			slog.Info(fmt.Sprintf("%v", output.ErrorMessages))
 			ctx = context.WithValue(ctx, "session", nil)
 			next.ServeHTTP(w, r.WithContext(ctx))
 			return
@@ -108,30 +132,17 @@ func (p *Provider) redirectIfExistsTraitsFieldsNotFilledIn(next http.Handler) ht
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		session := getSession(ctx)
-		targetPaths := []string{"/settings/profile/edit", "/login"}
-		slog.Info("redirectIfExistsTraitsFieldsNotFilledIn")
-		slog.Info(fmt.Sprintf("%v", isAuthenticated(session)))
-		slog.Info(fmt.Sprintf("%v", existsTraitsFieldsNotFilledIn(session)))
-		if isAuthenticated(session) &&
-			existsTraitsFieldsNotFilledIn(session) &&
-			!slices.Contains(targetPaths, r.URL.Path) {
-			redirect(w, r, fmt.Sprintf("%s/settings/profile/edit", generalEndpoint))
-		} else {
-			next.ServeHTTP(w, r.WithContext(ctx))
-		}
-	})
-}
 
-func (p *Provider) requireAuthenticated(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		session := getSession(ctx)
-		if isAuthenticated(session) {
-			slog.Info("Authenticated")
-			next.ServeHTTP(w, r.WithContext(ctx))
+		isIgnoreEndpoint := slices.Contains([]string{
+			fmt.Sprintf("POST %s", routePaths.MyProfile),
+			fmt.Sprintf("GET %s", routePaths.MyProfileEdit),
+			fmt.Sprintf("GET %s", routePaths.AuthLogin),
+		}, fmt.Sprintf("%s %s", r.Method, r.URL.Path))
+
+		if isAuthenticated(session) && existsTraitsFieldsNotFilledIn(session) && isIgnoreEndpoint {
+			redirect(w, r, routePaths.MyProfileEdit)
 		} else {
-			slog.Info("Not Authenticated")
-			redirect(w, r, fmt.Sprintf("%s/error/unauthorized", generalEndpoint))
+			next.ServeHTTP(w, r.WithContext(ctx))
 		}
 	})
 }

@@ -1,4 +1,4 @@
-{{define "verification/_code_form.html"}}
+{{define "auth/verification/_code_form.html"}}
 <div class="alert alert-info mt-2">
   <div>
     <div>アカウント検証メールが送信されました。</div>
@@ -8,7 +8,7 @@
 </div>
 <form 
   id="verification-form" 
-  hx-post="/verification/code?flow={{.VerificationFlowID}}"
+  hx-post="/auth/verification/code?flow={{.VerificationFlowID}}"
   hx-swap="outerHTML" 
   hx-target="this"
   > 
@@ -25,11 +25,17 @@
       </div>
       <input 
         name="code" 
-        required 
         min="6" 
         max="6" 
+        {{if .ValidationFieldError.Code}}
+        class="input input-bordered input-error"
+        {{else}}
         class="input input-bordered"
+        {{end}}
       >
+      {{if .ValidationFieldError.Code}}
+      <div class="text-sm text-red-700 my-2">{{.ValidationFieldError.Code}}</div>
+      {{end}}
     </label>
   </div>
 
