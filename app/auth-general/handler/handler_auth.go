@@ -24,7 +24,6 @@ func (p *Provider) handleGetAuthRegistration(w http.ResponseWriter, r *http.Requ
 		cookie: r.Header.Get("Cookie"),
 		flowID: r.URL.Query().Get("flow"),
 	}
-	slog.Debug("reqParams", "cookie", reqParams.cookie, "flowID", reqParams.flowID)
 
 	// Registration Flow の作成 or 取得
 	// Registration flowを新規作成した場合は、FlowIDを含めてリダイレクト
@@ -197,7 +196,7 @@ func (p *Provider) handleGetAuthVerificationCode(w http.ResponseWriter, r *http.
 	})
 	if err != nil {
 		w.WriteHeader(http.StatusOK)
-		tmpl.ExecuteTemplate(w, templatePaths.AuthVerification_CodeForm, viewParameters(session, r, map[string]any{
+		tmpl.ExecuteTemplate(w, templatePaths.AuthVerificationCode, viewParameters(session, r, map[string]any{
 			"ErrorMessages": output.ErrorMessages,
 		}))
 		return
@@ -213,7 +212,7 @@ func (p *Provider) handleGetAuthVerificationCode(w http.ResponseWriter, r *http.
 
 	// 検証コード入力フォーム、もしくは既にVerification Flow が完了している旨のメッセージをレンダリング
 	w.WriteHeader(http.StatusOK)
-	tmpl.ExecuteTemplate(w, templatePaths.AuthVerification_CodeForm, viewParameters(session, r, map[string]any{
+	tmpl.ExecuteTemplate(w, templatePaths.AuthVerificationCode, viewParameters(session, r, map[string]any{
 		"VerificationFlowID": output.FlowID,
 		"CsrfToken":          output.CsrfToken,
 		"IsUsedFlow":         output.IsUsedFlow,
@@ -428,6 +427,7 @@ func (p *Provider) handlePostAuthLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	validationFieldErrors := reqParams.validate()
 	if len(validationFieldErrors) > 0 {
+		slog.Info(fmt.Sprintf("%v", validationFieldErrors))
 		tmpl.ExecuteTemplate(w, templatePaths.AuthLogin_Form, viewParameters(session, r, map[string]any{
 			"LoginFlowID":          reqParams.flowID,
 			"CsrfToken":            reqParams.csrfToken,
@@ -479,9 +479,7 @@ func (p *Provider) handlePostAuthLogin(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Login flow成功時:
-	//   Traitsに設定させたい項目がまだ未設定の場合、Settings(profile)へリダイレクト
-	//   はホーム画面へリダイレクト
+	// return_to 指定時はreturn_toへリダイレクト
 	returnTo := r.URL.Query().Get("return_to")
 	slog.Info(returnTo)
 	var redirectTo string

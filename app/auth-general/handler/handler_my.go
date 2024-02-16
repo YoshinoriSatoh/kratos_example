@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"kratos_example/kratos"
 	"log/slog"
 	"net/http"
@@ -313,9 +312,7 @@ func (p *Provider) handlePostMyProfile(w http.ResponseWriter, r *http.Request) {
 		} else {
 			returnTo := url.QueryEscape(routePaths.MyProfile)
 			slog.Info(returnTo)
-			redirectTo := fmt.Sprintf("%s?return_to=%s", routePaths.AuthLogin, returnTo)
-			slog.Info(redirectTo)
-			redirect(w, r, redirectTo)
+			redirect(w, r, routePaths.AuthLogin)
 		}
 		return
 	}

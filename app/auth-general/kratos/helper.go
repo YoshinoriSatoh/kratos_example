@@ -11,49 +11,145 @@ import (
 	kratosclientgo "github.com/ory/kratos-client-go"
 )
 
+type ResponseType interface {
+	kratosclientgo.RegistrationFlow |
+		kratosclientgo.VerificationFlow |
+		kratosclientgo.LoginFlow |
+		kratosclientgo.RecoveryFlow |
+		kratosclientgo.SettingsFlow |
+		kratosclientgo.SuccessfulNativeRegistration |
+		kratosclientgo.ErrorBrowserLocationChangeRequired
+}
+
+// goのv1.0.0のSDKには不具合があるらしく、恐らく各種flowをUnmarshalしてもnode.attributes配下を取得できない模様
+// https://github.com/ory/sdk/issues/292
+// 仕方ないので、interface{}型でjsonを直接パースし、そこから必要な値を取得する
 func readHttpResponseBody(r *http.Response) (interface{}, error) {
+	var result interface{}
+
 	defer r.Body.Close()
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		slog.Error(err.Error())
-		return []byte{}, err
+		return result, err
 	}
 
-	var result interface{}
 	if err := json.Unmarshal(body, &result); err != nil {
 		slog.Error(err.Error())
-		return []byte{}, err
+		return result, err
 	}
-	return body, nil
+	return result, nil
 }
 
-// flow の ui から csrf_token を取得
-func getCsrfTokenFromFlowUi(ui kratosclientgo.UiContainer) string {
-	for _, node := range ui.Nodes {
-		if node.Attributes.UiNodeInputAttributes.Name == "csrf_token" {
-			return node.Attributes.UiNodeInputAttributes.Value.(string)
+// goのv1.0.0のSDKには不具合があるらしく、恐らく各種flowをUnmarshalしてもnode.attributes配下を取得できない模様
+// https://github.com/ory/sdk/issues/292
+// 仕方ないので、interface{}型でjsonを直接パースし、そこから必要な値を取得する
+// readHttpResponseBody で取得したjson(interface{})から csrf_token を取得
+func getCsrfTokenFromResponseBody(responseBody interface{}) string {
+	b, ok := responseBody.(map[string]interface{})
+	if !ok {
+		slog.Error("Fail type assertion responseBody to map[string]interface{}")
+		return ""
+	}
+	ui, ok := b["ui"].(map[string]interface{})
+	if !ok {
+		slog.Error("Fail type assertion ui to map[string]interface{}")
+		return ""
+	}
+	nodes, ok := ui["nodes"].([]interface{})
+	if !ok {
+		slog.Error("Fail type assertion nodes to []interface{}")
+		return ""
+	}
+
+	for _, v := range nodes {
+		node, ok := v.(map[string]interface{})
+		if !ok {
+			slog.Error("Fail type assertion node to map[string]interface{}")
+			return ""
+		}
+
+		attrs, ok := node["attributes"].(map[string]interface{})
+		if !ok {
+			slog.Error("Fail type assertion attributes to map[string]interface{}")
+			return ""
+		}
+
+		if attrs["name"] != nil && attrs["name"].(string) == "csrf_token" {
+			return attrs["value"].(string)
 		}
 	}
 	return ""
 }
 
-// SuccessfulRegistration から verification flow id を取得
-func getContinueWithVerificationFlowId(sr kratosclientgo.SuccessfulNativeRegistration) string {
-	for _, continueWith := range sr.ContinueWith {
-		if continueWith.ContinueWithVerificationUi.Action == "show_verification_ui" {
-			return continueWith.ContinueWithVerificationUi.Flow.Id
+// goのv1.0.0のSDKには不具合があるらしく、恐らくSuccessfulNativeRegistrationをUnmarshalしてもcontinue_with配下を取得できない模様
+// 関連 https://github.com/ory/sdk/issues/292
+// 仕方ないので、interface{}型でjsonを直接パースし、そこから必要な値を取得する
+// readHttpResponseBody で取得したjson(interface{})から continue_with.verification_ui.flow.id を取得
+func getContinueWithVerificationFlowId(responseBody interface{}) string {
+	b, ok := responseBody.(map[string]interface{})
+	if !ok {
+		slog.Error("Fail type assertion responseBody to map[string]interface{}")
+		return ""
+	}
+
+	continueWith, ok := b["continue_with"].([]interface{})
+	if !ok {
+		slog.Error("Fail type assertion continue_with to []interface{}")
+		return ""
+	}
+
+	for _, v := range continueWith {
+		c, ok := v.(map[string]interface{})
+		if !ok {
+			slog.Error("Fail type assertion continue_with to map[string]interface{}")
+			return ""
+		}
+
+		action, ok := c["action"].(string)
+		if !ok {
+			slog.Error("Fail type assertion action to string")
+			return ""
+		}
+
+		flow, ok := c["flow"].(map[string]interface{})
+		if !ok {
+			slog.Error("Fail type assertion flow to map[string]interface{}")
+			return ""
+		}
+
+		flowID, ok := flow["id"].(string)
+		if !ok {
+			slog.Error("Fail type assertion flow.id to string")
+			return ""
+		}
+
+		if action == "show_verification_ui" {
+			return flowID
 		}
 	}
+
+	slog.Error("Missing verification flow id")
 	return ""
 }
 
 // refirect browser to を取得
-func getRedirectBrowserToFromError(err kratosclientgo.ErrorBrowserLocationChangeRequired) string {
-	if err.RedirectBrowserTo == nil {
+func getRedirectBrowserToFromError(err error) string {
+	slog.Info(fmt.Sprintf("%v", err))
+	oerr, ok := err.(*kratosclientgo.GenericOpenAPIError)
+	if !ok {
 		return ""
-	} else {
-		return *err.RedirectBrowserTo
 	}
+
+	slog.Info(fmt.Sprintf("%v", oerr))
+	slog.Info(fmt.Sprintf("%v", oerr.Model()))
+	if m, ok := oerr.Model().(kratosclientgo.ErrorBrowserLocationChangeRequired); ok {
+		if m.RedirectBrowserTo != nil {
+			return *m.RedirectBrowserTo
+		}
+	}
+	slog.Error("Missing redirect_browser_to")
+	return ""
 }
 
 // kratos のエラーレスポンスからエラーメッセージを取得

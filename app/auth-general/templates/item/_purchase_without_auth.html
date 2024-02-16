@@ -1,0 +1,33 @@
+{{define "item/_purchase_without_auth.html"}}
+
+<div class="container mx-auto px-24">
+  <h2 class="text-lg text-center font-bold">購入手続き・会員登録</h2>
+
+  <div class="divider mt-1 h-px"></div> 
+
+  <div class="grid grid-cols-12">
+    <div class="container col-span-2">
+      <img src="{{.Image}}" alt="Burger" />
+    </div>
+    <div class="container col-span-10 ml-8">
+      <div class="mb-2 text-2xl">{{.Name}}</div>
+      <div class="mb-2 text-2xl">{{.Price}}</div>
+    </div>
+  </div> 
+
+  <div class="divider mt-1 h-px"></div> 
+
+  <div class="mb-4 container">
+    <div class="my-4 text-xl text-gray-400">ログインして購入する</div>
+    <div class="mx-auto text-center">
+      <button 
+        class="btn btn-accent"
+        hx-get="{{.RoutePaths.AuthLogin}}?return_to={{.RoutePaths.Item}}/{{.ItemID}}/purchase"
+        hx-swap="outerHTML" 
+        hx-target="this">ログイン</button>
+    </div>
+  </div>
+
+</div>
+
+{{end}}

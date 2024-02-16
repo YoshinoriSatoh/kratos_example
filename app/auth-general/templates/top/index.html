@@ -6,7 +6,7 @@
   <div class="my-4">
     <div class="grid gap-4 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5">
       {{ range .Items }}
-        {{template "item/_card.html" .}}
+        {{template "item/_card.html" . }}
       {{end}}
     </div>
   </div>

@@ -2,83 +2,98 @@ package handler
 
 import (
 	"net/http"
+	"strconv"
+	"time"
 )
 
-// Home画面（ログイン必須）レンダリング
 type item struct {
 	Name        string `json:"name"`
 	Image       string `json:"image"`
 	Description string `json:"description"`
 	Link        string `json:"link"`
+	Price       int    `json:"price"`
 }
 
-var items = []item{
-	{
-		Name:        "Item1",
-		Image:       "https://daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.jpg",
-		Description: "Item1 Description",
-		Link:        "/item/1",
-	},
-	{
-		Name:        "Item2",
-		Image:       "https://daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.jpg",
-		Description: "Item1 Description",
-		Link:        "/item/1",
-	},
-	{
-		Name:        "Item3",
-		Image:       "https://daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.jpg",
-		Description: "Item1 Description",
-		Link:        "/item/1",
-	},
-	{
-		Name:        "Item3",
-		Image:       "https://daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.jpg",
-		Description: "Item1 Description",
-		Link:        "/item/1",
-	},
-	{
-		Name:        "Item3",
-		Image:       "https://daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.jpg",
-		Description: "Item1 Description",
-		Link:        "/item/1",
-	},
-	{
-		Name:        "Item3",
-		Image:       "https://daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.jpg",
-		Description: "Item1 Description",
-		Link:        "/item/1",
-	},
-	{
-		Name:        "Item3",
-		Image:       "https://daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.jpg",
-		Description: "Item1 Description",
-		Link:        "/item/1",
-	},
-	{
-		Name:        "Item3",
-		Image:       "https://daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.jpg",
-		Description: "Item1 Description",
-		Link:        "/item/1",
-	},
-}
-
-func (p *Provider) handleGetTop(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	session := getSession(ctx)
-
-	tmpl.ExecuteTemplate(w, "top/index.html", viewParameters(session, r, map[string]any{
-		"Items": items,
-	}))
+type handleGetItemDertailRequestPostForm struct {
+	itemID int
 }
 
 func (p *Provider) handleGetItemDetail(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	session := getSession(ctx)
 
-	r.PathValue("id")
+	itemID, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "Invalid item id", http.StatusBadRequest)
+		return
+	}
+	reqParams := handleGetItemDertailRequestPostForm{
+		itemID: itemID,
+	}
 
+	item := items[reqParams.itemID]
 	tmpl.ExecuteTemplate(w, "item/detail.html", viewParameters(session, r, map[string]any{
-		"Items": items,
+		"ItemID":      itemID,
+		"Image":       item.Image,
+		"Name":        item.Name,
+		"Description": item.Description,
+		"Price":       item.Price,
 	}))
+}
+
+func (p *Provider) handleGetItemPurchase(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	session := getSession(ctx)
+
+	itemID, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "Invalid item id", http.StatusBadRequest)
+		return
+	}
+	reqParams := handleGetItemDertailRequestPostForm{
+		itemID: itemID,
+	}
+	item := items[reqParams.itemID]
+	viewParams := map[string]any{
+		"ItemID": itemID,
+		"Image":  item.Image,
+		"Name":   item.Name,
+		"Price":  item.Price,
+	}
+
+	if isAuthenticated(session) {
+		if r.Header.Get("HX-Request") == "true" {
+			tmpl.ExecuteTemplate(w, "item/_purchase.html", viewParameters(session, r, viewParams))
+		} else {
+			tmpl.ExecuteTemplate(w, "item/purchase.html", viewParameters(session, r, viewParams))
+		}
+	} else {
+		tmpl.ExecuteTemplate(w, "item/_purchase_without_auth.html", viewParameters(session, r, viewParams))
+	}
+}
+
+func (p *Provider) handlePostItemPurchase(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	session := getSession(ctx)
+
+	itemID, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "Invalid item id", http.StatusBadRequest)
+		return
+	}
+	reqParams := handleGetItemDertailRequestPostForm{
+		itemID: itemID,
+	}
+	item := items[reqParams.itemID]
+
+	time.Sleep(3 * time.Second)
+
+	viewParams := map[string]any{
+		"ItemID": itemID,
+		"Image":  item.Image,
+		"Name":   item.Name,
+		"Price":  item.Price,
+	}
+
+	tmpl.ExecuteTemplate(w, "item/_purchase_complete.html", viewParameters(session, r, viewParams))
 }

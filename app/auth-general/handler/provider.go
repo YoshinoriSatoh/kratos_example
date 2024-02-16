@@ -79,14 +79,18 @@ func (p *Provider) RegisterHandles(mux *http.ServeMux) *http.ServeMux {
 	mux.Handle(fmt.Sprintf("GET %s", routePaths.Top), p.baseMiddleware(p.handleGetTop))
 
 	// Item
-	mux.Handle(fmt.Sprintf("GET %s", routePaths.Item), p.baseMiddleware(p.handleGetItemDetail))
+	mux.Handle(fmt.Sprintf("GET %s/{id}", routePaths.Item), p.baseMiddleware(p.handleGetItemDetail))
+	mux.Handle(fmt.Sprintf("GET %s/{id}/purchase", routePaths.Item), p.baseMiddleware(p.handleGetItemPurchase))
+	mux.Handle(fmt.Sprintf("POST %s/{id}/purchase", routePaths.Item), p.baseMiddleware(p.handlePostItemPurchase))
 
 	return mux
 }
 
 func (p *Provider) baseMiddleware(handler http.HandlerFunc) http.Handler {
 	return p.loggingRquest(
-		p.setSession(handler),
+		p.setSession(
+			p.redirectIfExistsTraitsFieldsNotFilledIn(handler),
+		),
 	)
 }
 
@@ -131,9 +135,15 @@ func (p *Provider) redirectIfExistsTraitsFieldsNotFilledIn(next http.Handler) ht
 			fmt.Sprintf("POST %s", routePaths.MyProfile),
 			fmt.Sprintf("GET %s", routePaths.MyProfileEdit),
 			fmt.Sprintf("GET %s", routePaths.AuthLogin),
+			fmt.Sprintf("POST %s", routePaths.AuthLogin),
 		}, fmt.Sprintf("%s %s", r.Method, r.URL.Path))
 
-		if isAuthenticated(session) && existsTraitsFieldsNotFilledIn(session) && isIgnoreEndpoint {
+		slog.Info(fmt.Sprintf("%v", isAuthenticated(session)))
+		slog.Info(fmt.Sprintf("%v", isIgnoreEndpoint))
+		slog.Info(fmt.Sprintf("%s %s", r.Method, r.URL.Path))
+		slog.Info(fmt.Sprintf("%v", existsTraitsFieldsNotFilledIn(session)))
+		if isAuthenticated(session) && existsTraitsFieldsNotFilledIn(session) && !isIgnoreEndpoint {
+			slog.Info("Redirect to MyProfileEdit")
 			redirect(w, r, routePaths.MyProfileEdit)
 		} else {
 			next.ServeHTTP(w, r.WithContext(ctx))
