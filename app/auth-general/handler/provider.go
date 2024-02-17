@@ -138,10 +138,6 @@ func (p *Provider) redirectIfExistsTraitsFieldsNotFilledIn(next http.Handler) ht
 			fmt.Sprintf("POST %s", routePaths.AuthLogin),
 		}, fmt.Sprintf("%s %s", r.Method, r.URL.Path))
 
-		slog.Info(fmt.Sprintf("%v", isAuthenticated(session)))
-		slog.Info(fmt.Sprintf("%v", isIgnoreEndpoint))
-		slog.Info(fmt.Sprintf("%s %s", r.Method, r.URL.Path))
-		slog.Info(fmt.Sprintf("%v", existsTraitsFieldsNotFilledIn(session)))
 		if isAuthenticated(session) && existsTraitsFieldsNotFilledIn(session) && !isIgnoreEndpoint {
 			slog.Info("Redirect to MyProfileEdit")
 			redirect(w, r, routePaths.MyProfileEdit)
