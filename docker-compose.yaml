@@ -3,7 +3,7 @@ services:
   kratos:
     depends_on:
       - kratos-migrate
-    image: oryd/kratos:v1.0.0
+    image: oryd/kratos:v1.1.0
     command: serve -c /etc/config/kratos/config.yml --dev --watch-courier
     volumes:
       - type: bind
@@ -13,7 +13,7 @@ services:
   kratos-migrate:
     depends_on:
       - db-kratos
-    image: oryd/kratos:v1.0.0
+    image: oryd/kratos:v1.1.0
     command: -c /etc/config/kratos/config.yml migrate sql -e --yes
     volumes:
       - type: bind
