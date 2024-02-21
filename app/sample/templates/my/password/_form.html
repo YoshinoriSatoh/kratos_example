@@ -1,0 +1,55 @@
+{{define "my/password/_form.html"}}
+<form 
+  id="password-form"
+  hx-post="/my/password?flow={{.SettingsFlowID}}" 
+  hx-swap="outerHTML" 
+  hx-target="this"
+>
+  <input
+    name="csrf_token"
+    type="hidden"
+    value="{{.CsrfToken}}"
+  />
+  <div class="mt-2 mb-4">
+    <label class="form-control">
+      <div class="label">
+        <span class="label-text">パスワード</span>
+      </div>
+      <input 
+        id="password"
+        type="password" 
+        name="password" 
+        value="Overwatch2024!@"
+        class="input input-bordered"
+        onkeyup="this.setCustomValidity('')"
+        hx-on:htmx:validation:validate="
+          if(this.value != document.getElementById('password-confirmation').value) {
+            this.setCustomValidity('パスワードが一致しません') 
+            htmx.find('#settings-form').reportValidity()
+          }
+        "
+      >
+    </label>
+
+    <label class="form-control">
+      <div class="label">
+        <span class="label-text">パスワード確認</span>
+      </div>
+      <input 
+        id="password-confirmation"
+        type="password" 
+        name="password-confirmation" 
+        value="Overwatch2024!@"
+        class="input input-bordered"
+        onkeyup="this.setCustomValidity('')"
+      >
+    </label>
+  </div>
+
+  <div class="mx-auto text-center">
+    <button class="btn btn-primary btn-wide">送信</button>
+  </div>
+
+  {{ template "_alert.html"}}
+</form>
+{{end}}

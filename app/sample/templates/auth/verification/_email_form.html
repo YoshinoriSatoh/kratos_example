@@ -1,0 +1,41 @@
+{{define "auth/verification/_email_form.html"}}
+<form 
+  id="verification-form"
+  hx-post="/auth/verification/email?flow={{.VerificationFlowID}}" 
+  hx-swap="outerHTML" 
+  hx-target="this"
+>
+  <input
+    name="csrf_token"
+    type="hidden"
+    value="{{.CsrfToken}}"
+  />
+
+  <div class="mt-2 mb-4">
+    <label class="form-control">
+      <div class="label">
+        <span class="label-text">メールアドレス</span>
+      </div>
+      <input 
+        id="email"
+        name="email" 
+        placeholder="例) niko-chan@kratos-example.com"
+        {{if .ValidationFieldError.Email}}
+        class="input input-bordered input-error"
+        {{else}}
+        class="input input-bordered"
+        {{end}}
+      />
+      {{if .ValidationFieldError.Email}}
+      <div class="text-sm text-red-700 my-2">{{.ValidationFieldError.Email}}</div>
+      {{end}}
+    </label>
+  </div>
+
+  <div class="mx-auto text-center">
+    <button class="btn btn-primary btn-wide">送信</button>
+  </div>
+
+  {{ template "_alert.html"}}
+</form> 
+{{end}}

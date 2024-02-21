@@ -1,0 +1,57 @@
+{{define "my/profile/_view.html"}}
+<div id="profile-form">
+  <div class="mx-auto">
+    <button 
+      id="profile-view"
+      hx-get="/my/profile/form" 
+      hx-swap="outerHTML" 
+      hx-target="#profile-form"
+      class="btn btn-outline btn-primary"
+    >プロフィール編集</button>
+  </div>
+
+  <div class="mt-2 mb-4">
+    <label class="form-control">
+      <div class="label">
+        <span class="label-text">メールアドレス</span>
+      </div>
+      <input 
+        id="email"
+        name="email" 
+        type="email"
+        value="{{.Email}}"
+        class="input input-bordered"
+        disabled
+      >
+    </label>
+
+    <label class="form-control">
+      <div class="label">
+        <span class="label-text">ニックネーム</span>
+      </div>
+      <input 
+        id="nickname"
+        name="nickname" 
+        value="{{.Nickname}}"
+        class="input input-bordered"
+        disabled
+      />
+    </label>
+
+    <label class="form-control">
+      <div class="label">
+        <span class="label-text">生年月日</span>
+      </div>
+      <input 
+        id="birthdate"
+        name="birthdate" 
+        value="{{.Birthdate}}"
+        class="input input-bordered"
+        disabled
+      />
+    </label>
+  </div>
+
+  {{ template "_alert.html"}}
+</div>
+{{end}}

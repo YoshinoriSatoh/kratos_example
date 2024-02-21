@@ -1,0 +1,57 @@
+{{define "auth/login/_form.html"}}
+{{ if and (ne .Information "") (ne .Information nil) }}
+<div class="alert alert-info my-2">
+  <div>
+    <div>{{.Information}}</div>
+  </div>
+</div>
+{{end}}
+<form 
+  id="login-form"
+  hx-post="/auth/login?flow={{.LoginFlowID}}&return_to={{.ReturnTo}}" 
+  hx-swap="outerHTML" 
+  hx-target="this"
+  class="mb-4"
+>
+  <input
+    name="csrf_token"
+    type="hidden"
+    value="{{.CsrfToken}}"
+  />
+
+  <div class="mt-2 mb-4">
+    <label class="form-control">
+      <div class="label">
+        <span class="label-text">メールアドレス</span>
+      </div>
+      <input 
+        id="email"
+        name="identifier" 
+        type="email"
+        required
+        value="yoshinori.satoh.tokyo@gmail.com"
+        class="input input-bordered"
+      >
+    </label>
+
+    <label class="form-control">
+      <div class="label">
+        <span class="label-text">パスワード</span>
+      </div>
+      <input 
+        id="password"
+        type="password" 
+        name="password" 
+        value="Overwatch2024!@"
+        class="input input-bordered"
+      >
+    </label>
+  </div>
+
+  <div class="mx-auto text-center">
+    <button class="btn btn-primary btn-wide">ログイン</button>
+  </div>
+
+  {{ template "_alert.html"}}
+</form> 
+{{end}}
