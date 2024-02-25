@@ -6,7 +6,6 @@ import (
 	"kratos_example/kratos"
 	"log/slog"
 	"net/http"
-	"slices"
 	"strings"
 )
 
@@ -46,6 +45,7 @@ func (p *Provider) RegisterHandles(mux *http.ServeMux) *http.ServeMux {
 	// Authentication Registration
 	mux.Handle("GET /auth/registration", p.baseMiddleware(p.handleGetAuthRegistration))
 	mux.Handle("POST /auth/registration", p.baseMiddleware(p.handlePostAuthRegistration))
+	mux.Handle("POST /auth/registration/oidc", p.baseMiddleware(p.handlePostAuthRegistrationOidc))
 
 	// Authentication Verification
 	mux.Handle("GET /auth/verification", p.baseMiddleware(p.handleGetAuthVerification))
@@ -56,6 +56,7 @@ func (p *Provider) RegisterHandles(mux *http.ServeMux) *http.ServeMux {
 	// Authentication Login
 	mux.Handle("GET /auth/login", p.baseMiddleware(p.handleGetAuthLogin))
 	mux.Handle("POST /auth/login", p.baseMiddleware(p.handlePostAuthLogin))
+	mux.Handle("POST /auth/login/oidc", p.baseMiddleware(p.handlePostAuthLoginOidc))
 
 	// Authentication Logout
 	mux.Handle("POST /auth/logout", p.baseMiddleware(p.handlePostAuthLogout))
@@ -66,14 +67,14 @@ func (p *Provider) RegisterHandles(mux *http.ServeMux) *http.ServeMux {
 	mux.Handle("POST /auth/recovery/code", p.baseMiddleware(p.handlePostAuthRecoveryCode))
 
 	// My Password
-	mux.Handle("GET /my/password", p.settingsMiddleware(p.handleGetMyPassword))
-	mux.Handle("POST /my/password", p.settingsMiddleware(p.handlePostMyPassword))
+	mux.Handle("GET /my/password", p.baseMiddleware(p.handleGetMyPassword))
+	mux.Handle("POST /my/password", p.baseMiddleware(p.handlePostMyPassword))
 
 	// My Profile
-	mux.Handle("GET /my/profile", p.settingsMiddleware(p.handleGetMyProfile))
-	mux.Handle("GET /my/profile/edit", p.settingsMiddleware(p.handleGetMyProfileEdit))
-	mux.Handle("GET /my/profile/form", p.settingsMiddleware(p.handleGetMyProfileForm))
-	mux.Handle("POST /my/profile", p.settingsMiddleware(p.handlePostMyProfile))
+	mux.Handle("GET /my/profile", p.baseMiddleware(p.handleGetMyProfile))
+	mux.Handle("GET /my/profile/edit", p.baseMiddleware(p.handleGetMyProfileEdit))
+	mux.Handle("GET /my/profile/form", p.baseMiddleware(p.handleGetMyProfileForm))
+	mux.Handle("POST /my/profile", p.baseMiddleware(p.handlePostMyProfile))
 
 	// Top
 	mux.Handle("GET /", p.baseMiddleware(p.handleGetTop))
@@ -88,17 +89,7 @@ func (p *Provider) RegisterHandles(mux *http.ServeMux) *http.ServeMux {
 
 func (p *Provider) baseMiddleware(handler http.HandlerFunc) http.Handler {
 	return p.loggingRquest(
-		p.setSession(
-			p.redirectIfExistsTraitsFieldsNotFilledIn(handler),
-		),
-	)
-}
-
-func (p *Provider) settingsMiddleware(handler http.HandlerFunc) http.Handler {
-	return p.loggingRquest(
-		p.setSession(
-			p.redirectIfExistsTraitsFieldsNotFilledIn(handler),
-		),
+		p.setSession(handler),
 	)
 }
 
@@ -123,26 +114,5 @@ func (p *Provider) setSession(next http.Handler) http.Handler {
 		}
 		ctx = context.WithValue(ctx, "session", output.Session)
 		next.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
-
-func (p *Provider) redirectIfExistsTraitsFieldsNotFilledIn(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		session := getSession(ctx)
-
-		isIgnoreEndpoint := slices.Contains([]string{
-			fmt.Sprintf("POST %s", "/my/profile"),
-			fmt.Sprintf("GET %s", "/my/profile/edit"),
-			fmt.Sprintf("GET %s", "/auth/login"),
-			fmt.Sprintf("POST %s", "/auth/login"),
-		}, fmt.Sprintf("%s %s", r.Method, r.URL.Path))
-
-		if isAuthenticated(session) && existsTraitsFieldsNotFilledIn(session) && !isIgnoreEndpoint {
-			slog.Info("Redirect to MyProfileEdit")
-			redirect(w, r, "/my/profile/edit")
-		} else {
-			next.ServeHTTP(w, r.WithContext(ctx))
-		}
 	})
 }

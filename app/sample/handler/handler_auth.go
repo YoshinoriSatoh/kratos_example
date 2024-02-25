@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 // ------------------------- Authentication Registration -------------------------
@@ -49,19 +50,27 @@ func (p *Provider) handleGetAuthRegistration(w http.ResponseWriter, r *http.Requ
 
 	// flowの情報に従ってレンダリング
 	w.WriteHeader(http.StatusOK)
-	tmpl.ExecuteTemplate(w, "auth/registration/index.html", viewParameters(session, r, map[string]any{
-		"RegistrationFlowID": output.FlowID,
-		"CsrfToken":          output.CsrfToken,
-	}))
+	if output.RenderingType == kratos.RegistrationRenderingTypeOidc {
+		tmpl.ExecuteTemplate(w, "auth/registration/oidc.html", viewParameters(session, r, map[string]any{
+			"RegistrationFlowID": output.FlowID,
+			"CsrfToken":          output.CsrfToken,
+			"Traits":             output.Traits,
+		}))
+	} else {
+		tmpl.ExecuteTemplate(w, "auth/registration/index.html", viewParameters(session, r, map[string]any{
+			"RegistrationFlowID": output.FlowID,
+			"CsrfToken":          output.CsrfToken,
+		}))
+	}
 }
 
 // Handler POST /auth/registration
 type handlePostAuthRegistrationRequestParams struct {
-	FlowID               string `validate:"required,uuid4"`
-	CsrfToken            string `validate:"required"`
-	Email                string `validate:"required,email" ja:"メールアドレス"`
-	Password             string `validate:"required" ja:"パスワード"`
-	PasswordConfirmation string `validate:"required" ja:"パスワード確認"`
+	FlowID               string        `validate:"required,uuid4"`
+	CsrfToken            string        `validate:"required"`
+	Traits               kratos.Traits `validate:"required"`
+	Password             string        `validate:"required" ja:"パスワード"`
+	PasswordConfirmation string        `validate:"required" ja:"パスワード確認"`
 }
 
 func (p *handlePostAuthRegistrationRequestParams) validate() map[string]string {
@@ -81,10 +90,17 @@ func (p *Provider) handlePostAuthRegistration(w http.ResponseWriter, r *http.Req
 	session := getSession(ctx)
 
 	// リクエストパラメータのバリデーション
+	traits := kratos.Traits{
+		Email:     r.PostFormValue("traits.email"),
+		Firstname: r.PostFormValue("traits.firstname"),
+		Lastname:  r.PostFormValue("traits.lastname"),
+		Nickname:  r.PostFormValue("traits.nickname"),
+	}
+	traits.Birthdate, _ = time.Parse("2006/01/02", r.PostFormValue("traits.birthdate"))
 	reqParams := handlePostAuthRegistrationRequestParams{
 		FlowID:               r.URL.Query().Get("flow"),
 		CsrfToken:            r.PostFormValue("csrf_token"),
-		Email:                r.PostFormValue("email"),
+		Traits:               traits,
 		Password:             r.PostFormValue("password"),
 		PasswordConfirmation: r.PostFormValue("password-confirmation"),
 	}
@@ -93,7 +109,7 @@ func (p *Provider) handlePostAuthRegistration(w http.ResponseWriter, r *http.Req
 		tmpl.ExecuteTemplate(w, "auth/registration/_form.html", viewParameters(session, r, map[string]any{
 			"RegistrationFlowID":   reqParams.FlowID,
 			"CsrfToken":            reqParams.CsrfToken,
-			"Email":                reqParams.Email,
+			"Traits":               traits,
 			"Password":             reqParams.Password,
 			"ValidationFieldError": validationFieldErrors,
 		}))
@@ -104,15 +120,16 @@ func (p *Provider) handlePostAuthRegistration(w http.ResponseWriter, r *http.Req
 	output, err := p.d.Kratos.UpdateRegistrationFlow(kratos.UpdateRegistrationFlowInput{
 		Cookie:    r.Header.Get("Cookie"),
 		FlowID:    reqParams.FlowID,
-		Email:     reqParams.Email,
-		Password:  reqParams.Password,
 		CsrfToken: reqParams.CsrfToken,
+		Method:    "password",
+		Traits:    traits,
+		Password:  reqParams.Password,
 	})
 	if err != nil {
 		tmpl.ExecuteTemplate(w, "auth/registration/_form.html", viewParameters(session, r, map[string]any{
 			"RegistrationFlowID": reqParams.FlowID,
 			"CsrfToken":          reqParams.CsrfToken,
-			"Email":              reqParams.Email,
+			"Traits":             traits,
 			"Password":           reqParams.Password,
 			"ErrorMessages":      output.ErrorMessages,
 		}))
@@ -124,6 +141,78 @@ func (p *Provider) handlePostAuthRegistration(w http.ResponseWriter, r *http.Req
 
 	// Registration flow成功時はVerification flowへリダイレクト
 	redirect(w, r, fmt.Sprintf("%s?flow=%s", "/auth/verification/code", output.VerificationFlowID))
+	w.WriteHeader(http.StatusOK)
+}
+
+// Handler POST /auth/registration/oidc
+type handlePostAuthRegistrationOidcRequestParams struct {
+	FlowID    string        `validate:"required,uuid4"`
+	CsrfToken string        `validate:"required"`
+	Provider  string        `validate:"required"`
+	Traits    kratos.Traits `validate:"required"`
+}
+
+func (p *handlePostAuthRegistrationOidcRequestParams) validate() map[string]string {
+	err := validate.Struct(p)
+	if err != nil {
+		slog.Error(err.Error())
+	}
+	fieldErrors := validationFieldErrors(validate.Struct(p))
+	return fieldErrors
+}
+
+func (p *Provider) handlePostAuthRegistrationOidc(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	session := getSession(ctx)
+
+	// リクエストパラメータのバリデーション
+	traits := kratos.Traits{
+		Email:     r.PostFormValue("traits.email"),
+		Firstname: r.PostFormValue("traits.firstname"),
+		Lastname:  r.PostFormValue("traits.lastname"),
+		Nickname:  r.PostFormValue("traits.nickname"),
+	}
+	traits.Birthdate, _ = time.Parse("2006/01/02", r.PostFormValue("traits.birthdate"))
+	reqParams := handlePostAuthRegistrationOidcRequestParams{
+		FlowID:    r.URL.Query().Get("flow"),
+		CsrfToken: r.PostFormValue("csrf_token"),
+		Provider:  r.PostFormValue("provider"),
+		Traits:    traits,
+	}
+	validationFieldErrors := reqParams.validate()
+	if len(validationFieldErrors) > 0 {
+		tmpl.ExecuteTemplate(w, "auth/registration/_form_oidc.html", viewParameters(session, r, map[string]any{
+			"RegistrationFlowID":   reqParams.FlowID,
+			"CsrfToken":            reqParams.CsrfToken,
+			"Traits":               traits,
+			"ValidationFieldError": validationFieldErrors,
+		}))
+		return
+	}
+
+	// Registration Flow 更新
+	output, err := p.d.Kratos.UpdateRegistrationFlow(kratos.UpdateRegistrationFlowInput{
+		Cookie:    r.Header.Get("Cookie"),
+		FlowID:    reqParams.FlowID,
+		CsrfToken: reqParams.CsrfToken,
+		Method:    "oidc",
+		Provider:  reqParams.Provider,
+		Traits:    traits,
+	})
+	if err != nil && output.RedirectBrowserTo == "" {
+		tmpl.ExecuteTemplate(w, "auth/registration/_form_oidc.html", viewParameters(session, r, map[string]any{
+			"RegistrationFlowID": reqParams.FlowID,
+			"CsrfToken":          reqParams.CsrfToken,
+			"Traits":             traits,
+			"ErrorMessages":      output.ErrorMessages,
+		}))
+		return
+	}
+
+	// kratosのcookieをそのままブラウザへ受け渡す
+	setCookieToResponseHeader(w, output.Cookies)
+
+	redirect(w, r, output.RedirectBrowserTo)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -489,6 +578,62 @@ func (p *Provider) handlePostAuthLogin(w http.ResponseWriter, r *http.Request) {
 		redirectTo = "/"
 	}
 	redirect(w, r, redirectTo)
+}
+
+// Handler POST /auth/login/oidc
+type handlePostAuthLoginOidcRequestParams struct {
+	flowID    string `validate:"uuid4"`
+	csrfToken string `validate:"required"`
+	provider  string `validate:"required"`
+}
+
+func (p *handlePostAuthLoginOidcRequestParams) validate() map[string]string {
+	fieldErrors := validationFieldErrors(validate.Struct(p))
+	return fieldErrors
+}
+
+func (p *Provider) handlePostAuthLoginOidc(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	session := getSession(ctx)
+
+	reqParams := handlePostAuthLoginOidcRequestParams{
+		flowID:    r.URL.Query().Get("flow"),
+		csrfToken: r.PostFormValue("csrf_token"),
+		provider:  r.PostFormValue("provider"),
+	}
+	slog.Info(fmt.Sprintf("%v", reqParams))
+	validationFieldErrors := reqParams.validate()
+	if len(validationFieldErrors) > 0 {
+		slog.Info(fmt.Sprintf("%v", validationFieldErrors))
+		tmpl.ExecuteTemplate(w, "auth/login/_form.html", viewParameters(session, r, map[string]any{
+			"LoginFlowID":          reqParams.flowID,
+			"CsrfToken":            reqParams.csrfToken,
+			"ValidationFieldError": validationFieldErrors,
+		}))
+		return
+	}
+
+	// Login Flow 更新
+	output, err := p.d.Kratos.UpdateOidcLoginFlow(kratos.UpdateOidcLoginFlowInput{
+		Cookie:    r.Header.Get("Cookie"),
+		FlowID:    reqParams.flowID,
+		CsrfToken: reqParams.csrfToken,
+		Provider:  reqParams.provider,
+	})
+	if err != nil && output.RedirectBrowserTo == "" {
+		w.WriteHeader(http.StatusOK)
+		tmpl.ExecuteTemplate(w, "auth/login/_form.html", viewParameters(session, r, map[string]any{
+			"LoginFlowID":   reqParams.flowID,
+			"CsrfToken":     reqParams.csrfToken,
+			"ErrorMessages": output.ErrorMessages,
+		}))
+		return
+	}
+
+	// kratosのcookieをそのままブラウザへ受け渡す
+	setCookieToResponseHeader(w, output.Cookies)
+
+	redirect(w, r, output.RedirectBrowserTo)
 }
 
 // ------------------------- Authentication Logout -------------------------

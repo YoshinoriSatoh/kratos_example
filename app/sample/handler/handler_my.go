@@ -142,6 +142,8 @@ func (p *Provider) handleGetMyProfile(w http.ResponseWriter, r *http.Request) {
 
 	// flowの情報に従ってレンダリング
 	email := session.GetValueFromTraits("email")
+	firstname := session.GetValueFromTraits("firstname")
+	lastname := session.GetValueFromTraits("lastname")
 	nickname := session.GetValueFromTraits("nickname")
 	birthdate := session.GetValueFromTraits("birthdate")
 	var information string
@@ -153,6 +155,8 @@ func (p *Provider) handleGetMyProfile(w http.ResponseWriter, r *http.Request) {
 		"SettingsFlowID": output.FlowID,
 		"CsrfToken":      output.CsrfToken,
 		"Email":          email,
+		"Firstname":      firstname,
+		"Lastname":       lastname,
 		"Nickname":       nickname,
 		"Birthdate":      birthdate,
 		"Information":    information,
@@ -192,18 +196,14 @@ func (p *Provider) handleGetMyProfileEdit(w http.ResponseWriter, r *http.Request
 	// セッションから現在の値を取得
 	params := loadProfileFromSessionIfEmpty(updateProfileParams{}, session)
 
-	var information string
-	if existsTraitsFieldsNotFilledIn(session) {
-		information = "プロフィールの入力をお願いします"
-	}
-
 	tmpl.ExecuteTemplate(w, "my/profile/edit.html", viewParameters(session, r, map[string]any{
 		"SettingsFlowID": output.FlowID,
 		"CsrfToken":      output.CsrfToken,
 		"Email":          params.Email,
+		"Firstname":      params.Firstname,
+		"Lastname":       params.Lastname,
 		"Nickname":       params.Nickname,
 		"Birthdate":      params.Birthdate,
-		"Infomation":     information,
 	}))
 }
 
@@ -244,6 +244,8 @@ func (p *Provider) handleGetMyProfileForm(w http.ResponseWriter, r *http.Request
 		"SettingsFlowID": output.FlowID,
 		"CsrfToken":      output.CsrfToken,
 		"Email":          params.Email,
+		"Firstname":      params.Firstname,
+		"Lastname":       params.Lastname,
 		"Nickname":       params.Nickname,
 		"Birthdate":      params.Birthdate,
 	}))
@@ -255,6 +257,8 @@ type handlePostMyProfileRequestPostForm struct {
 	flowID    string `validate:"required,uuid4"`
 	csrfToken string `validate:"required"`
 	Email     string `validate:"required,email" ja:"メールアドレス"`
+	Firstname string `validate:"required,min=5,max=20" ja:"氏名(性)"`
+	Lastname  string `validate:"required,min=5,max=20" ja:"氏名(名)"`
 	Nickname  string `validate:"required,min=5,max=20" ja:"ニックネーム"`
 	Birthdate string `validate:"required,datetime=2006-01-02" ja:"生年月日"`
 }
@@ -282,6 +286,8 @@ func (p *Provider) handlePostMyProfile(w http.ResponseWriter, r *http.Request) {
 		tmpl.ExecuteTemplate(w, "auth/registration/_form.html", viewParameters(session, r, map[string]any{
 			"RegistrationFlowID":   reqParams.flowID,
 			"CsrfToken":            reqParams.csrfToken,
+			"Firstname":            reqParams.Firstname,
+			"Lastname":             reqParams.Lastname,
 			"Nickname":             reqParams.Nickname,
 			"Birthdate":            reqParams.Birthdate,
 			"ValidationFieldError": validationFieldErrors,
@@ -292,6 +298,8 @@ func (p *Provider) handlePostMyProfile(w http.ResponseWriter, r *http.Request) {
 	params := loadProfileFromSessionIfEmpty(updateProfileParams{
 		FlowID:    reqParams.flowID,
 		Email:     reqParams.Email,
+		Firstname: reqParams.Firstname,
+		Lastname:  reqParams.Lastname,
 		Nickname:  reqParams.Nickname,
 		Birthdate: reqParams.Birthdate,
 	}, session)
@@ -310,6 +318,8 @@ func (p *Provider) handlePostMyProfile(w http.ResponseWriter, r *http.Request) {
 				"CsrfToken":      reqParams.csrfToken,
 				"ErrorMessages":  []string{"Error"},
 				"Email":          params.Email,
+				"Firstname":      params.Firstname,
+				"Lastname":       params.Lastname,
 				"Nickname":       params.Nickname,
 				"Birthdate":      params.Birthdate,
 			}))
@@ -328,6 +338,8 @@ func (p *Provider) handlePostMyProfile(w http.ResponseWriter, r *http.Request) {
 		CsrfToken: reqParams.csrfToken,
 		Traits: map[string]interface{}{
 			"email":     params.Email,
+			"firstname": params.Firstname,
+			"lastname":  params.Lastname,
 			"nickname":  params.Nickname,
 			"birthdate": params.Birthdate,
 		},
@@ -337,6 +349,8 @@ func (p *Provider) handlePostMyProfile(w http.ResponseWriter, r *http.Request) {
 			"CsrfToken":     reqParams.csrfToken,
 			"ErrorMessages": output.ErrorMessages,
 			"Email":         params.Email,
+			"Firstname":     params.Firstname,
+			"Lastname":      params.Lastname,
 			"Nickname":      params.Nickname,
 			"Birthdate":     params.Birthdate,
 		}))
@@ -353,6 +367,8 @@ func (p *Provider) handlePostMyProfile(w http.ResponseWriter, r *http.Request) {
 type updateProfileParams struct {
 	FlowID    string `json:"flow_id"`
 	Email     string `json:"email"`
+	Firstname string `json:"firstname"`
+	Lastname  string `json:"lastname"`
 	Nickname  string `json:"nickname"`
 	Birthdate string `json:"birthdate"`
 }
@@ -361,6 +377,12 @@ func loadProfileFromSessionIfEmpty(params updateProfileParams, session *kratos.S
 	if session != nil {
 		if params.Email == "" {
 			params.Email = session.GetValueFromTraits("email")
+		}
+		if params.Firstname == "" {
+			params.Firstname = session.GetValueFromTraits("firstname")
+		}
+		if params.Lastname == "" {
+			params.Lastname = session.GetValueFromTraits("lastname")
 		}
 		if params.Nickname == "" {
 			params.Nickname = session.GetValueFromTraits("nickname")
@@ -378,6 +400,8 @@ func (p *Provider) updateProfile(w http.ResponseWriter, r *http.Request, params 
 
 	params = loadProfileFromSessionIfEmpty(updateProfileParams{
 		Email:     params.Email,
+		Firstname: params.Firstname,
+		Lastname:  params.Lastname,
 		Nickname:  params.Nickname,
 		Birthdate: params.Birthdate,
 	}, session)
@@ -398,6 +422,8 @@ func (p *Provider) updateProfile(w http.ResponseWriter, r *http.Request, params 
 		CsrfToken: output.CsrfToken,
 		Traits: map[string]interface{}{
 			"email":     params.Email,
+			"firstname": params.Firstname,
+			"lastname":  params.Lastname,
 			"nickname":  params.Nickname,
 			"birthdate": params.Birthdate,
 		},

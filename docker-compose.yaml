@@ -5,6 +5,8 @@ services:
       - kratos-migrate
     image: oryd/kratos:v1.1.0
     command: serve -c /etc/config/kratos/config.yml --dev --watch-courier
+    ports:
+      - 4433:4433
     volumes:
       - type: bind
         source: ./kratos

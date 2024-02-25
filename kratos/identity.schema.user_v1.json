@@ -25,6 +25,14 @@
             }
           }
         },
+        "firstname": {
+          "type": "string",
+          "title": "firstname"
+        },
+        "lastname": {
+          "type": "string",
+          "title": "lastname"
+        },
         "nickname": {
           "type": "string",
           "title": "nickname"
@@ -35,7 +43,10 @@
         }
       },
       "required": [
-        "email"
+        "email",
+        "firstname",
+        "lastname",
+        "nickname"
       ],
       "additionalProperties": false
     }

@@ -14,6 +14,21 @@ serve:
     base_url: http://localhost:4433
     request_log:
       disable_for_health: true
+    cors:
+      allowed_origins:
+        - http://localhost:3000
+        - http://localhost:4433
+      allowed_methods:
+        - OPTIONS
+        - GET
+        - POST
+      allowed_headers:
+        - "*"
+      exposed_headers:
+        - "*"
+      allow_credentials: true
+      debug: true
+      enabled: true
   admin:
     port: 4434
     base_url: http://localhost:4434
@@ -34,10 +49,31 @@ selfservice:
         identifier_similarity_check_enabled: true
     profile:
       enabled: true
+    oidc:
+      enabled: true
+      config:
+        providers:
+          - id: google
+            provider: google
+            client_id: 181885051443-eslsbl8qs7fp4593ureptlq4p1kp48d0.apps.googleusercontent.com
+            client_secret: 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
+            mapper_url: file:///etc/config/kratos/data-mappers/google.jsonnet
+            issuer_url: https://accounts.google.com
+            auth_url: https://accounts.google.com/o/oauth2/v2/auth
+            token_url: https://www.googleapis.com/oauth2/v4/token
+            scope:
+              - email
+              - profile
+              - openid
   flows:
     registration:
       enabled: true
       ui_url: http://localhost:3000/auth/registration
+      after:
+        oidc:
+          hooks:
+            - hook: session 
+          default_browser_return_url: http://localhost:3000/
     verification:
       enabled: true
       ui_url: http://localhost:3000/auth/verification
@@ -59,6 +95,8 @@ selfservice:
         hooks:
           - hook: require_verified_address
         password:
+          default_browser_return_url: http://localhost:3000/
+        oidc:
           default_browser_return_url: http://localhost:3000/
     logout:
       after:

@@ -29,7 +29,6 @@
         name="identifier" 
         type="email"
         required
-        value="yoshinori.satoh.tokyo@gmail.com"
         class="input input-bordered"
       >
     </label>
@@ -54,4 +53,30 @@
 
   {{ template "_alert.html"}}
 </form> 
+
+<form 
+  id="login-form"
+  hx-post="/auth/login?flow={{.LoginFlowID}}&return_to={{.ReturnTo}}" 
+  hx-swap="outerHTML" 
+  hx-target="this"
+  class="mb-4"
+>
+  <input
+    name="csrf_token"
+    type="hidden"
+    value="{{.CsrfToken}}"
+  />
+
+  <div class="mx-auto text-center">
+    <button 
+      class="btn btn-primary btn-wide"
+      hx-post="/auth/login/oidc?flow={{.LoginFlowID}}" 
+      hx-vals='{"provider": "google"}'
+      hx-swap="outerHTML" 
+      hx-target="this">googleログイン</button>
+  </div>
+
+  {{ template "_alert.html"}}
+</form> 
+
 {{end}}
