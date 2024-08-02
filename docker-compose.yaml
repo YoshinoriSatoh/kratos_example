@@ -1,9 +1,8 @@
-version: '3.8'
 services:
   kratos:
     depends_on:
       - kratos-migrate
-    image: oryd/kratos:v1.1.0
+    image: oryd/kratos:v1.2.0
     command: serve -c /etc/config/kratos/config.yml --dev --watch-courier
     volumes:
       - type: bind
@@ -13,7 +12,7 @@ services:
   kratos-migrate:
     depends_on:
       - db-kratos
-    image: oryd/kratos:v1.1.0
+    image: oryd/kratos:v1.2.0
     command: -c /etc/config/kratos/config.yml migrate sql -e --yes
     volumes:
       - type: bind
@@ -46,11 +45,21 @@ services:
     build:
       context: ./app/sample
       target: development
-    command: air
-    ports:
-      - 3000:3000
+    command: > 
+      /bin/bash -c '
+        if [ "$$DEBUG" = "true" ]; then
+          echo "debug mode"
+          air -d -build.cmd "go build -gcflags \"all=-N -l\" -o tmp/main cmd/server/main.go && dlv exec --headless=true --listen=:2345 --continue --accept-multiclient ./tmp/main"
+        else
+          air
+        fi
+      '
     environment:
       TERM: xterm-256color
+      DEBUG: "true"
+    ports:
+      - 3000:3000
+      - 2345:2345
     working_dir: /root/app
     cap_add:
       - SYS_PTRACE

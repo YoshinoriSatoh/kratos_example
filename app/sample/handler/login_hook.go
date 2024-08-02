@@ -35,9 +35,9 @@ func saveAfterLoginHook(w http.ResponseWriter, loginHook afterLoginHook, cookieK
 		Name:     string(cookieKey),
 		Value:    base64CookieString,
 		MaxAge:   3600,
-		Path:     cookieParams.Path,
-		Domain:   cookieParams.Domain,
-		Secure:   cookieParams.Secure,
+		Path:     pkgVars.cookieParams.Path,
+		Domain:   pkgVars.cookieParams.Domain,
+		Secure:   pkgVars.cookieParams.Secure,
 		HttpOnly: true,
 	})
 	return nil
@@ -82,9 +82,9 @@ func deleteAfterLoginHook(w http.ResponseWriter, cookieKey afterLoginHookCookieK
 		Name:     string(cookieKey),
 		Value:    "",
 		MaxAge:   -1,
-		Path:     cookieParams.Path,
-		Domain:   cookieParams.Domain,
-		Secure:   cookieParams.Secure,
+		Path:     pkgVars.cookieParams.Path,
+		Domain:   pkgVars.cookieParams.Domain,
+		Secure:   pkgVars.cookieParams.Secure,
 		HttpOnly: true,
 	})
 }

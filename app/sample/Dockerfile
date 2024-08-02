@@ -21,7 +21,7 @@ RUN mkdir -p -m 0600 /root/.ssh && \
 FROM base as development
 WORKDIR /root/app
 RUN go install golang.org/x/tools/gopls@latest && \
-    go install github.com/go-delve/delve/cmd/dlv@v1.8.2 && \
+    go install github.com/go-delve/delve/cmd/dlv@v1.22.1 && \
     go install github.com/rubenv/sql-migrate/...@v1.1.1 && \
     go install github.com/kyoh86/richgo@v0.3.10 && \
     curl -sSfL https://raw.githubusercontent.com/cosmtrek/air/master/install.sh | sh -s -- -b /usr/local/bin

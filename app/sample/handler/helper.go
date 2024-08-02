@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"kratos_example/kratos"
 	"log/slog"
 	"net/http"
@@ -11,15 +12,24 @@ import (
 
 func getSession(ctx context.Context) *kratos.Session {
 	session := ctx.Value("session")
+	slog.Info(fmt.Sprintf("%v", session))
+	slog.Info(fmt.Sprintf("%v", session))
+	slog.Info(fmt.Sprintf("%v", session))
+	slog.Info(fmt.Sprintf("%v", session))
+	slog.Info(fmt.Sprintf("%v", session))
 	if session == nil {
 		return nil
 	}
 
-	kratosSession, _ := session.(*kratos.Session)
-	return kratosSession
+	kratosSession, ok := session.(kratos.Session)
+	slog.Info(fmt.Sprintf("%v", ok))
+
+	slog.Info(fmt.Sprintf("%v", kratosSession))
+	return &kratosSession
 }
 
 func isAuthenticated(session *kratos.Session) bool {
+	slog.Info(fmt.Sprintf("%v", session))
 	if session != nil {
 		return true
 	} else {
@@ -43,7 +53,7 @@ func validationFieldErrors(err error) map[string]string {
 
 	fieldsErrors := make(map[string]string)
 	for _, err := range err.(validator.ValidationErrors) {
-		fieldsErrors[err.StructField()] = err.Translate(trans)
+		fieldsErrors[err.StructField()] = err.Translate(pkgVars.trans)
 	}
 	return fieldsErrors
 }
@@ -78,7 +88,7 @@ func getNavbarviewParameters(session *kratos.Session) map[string]any {
 	var nickname string
 
 	if session != nil {
-		nickname = session.GetValueFromTraits("nickname")
+		nickname = session.Identity.Traits.Nickname
 	}
 	return map[string]any{
 		"Nickname": nickname,

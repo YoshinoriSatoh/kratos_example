@@ -18,11 +18,13 @@ type Dependencies struct {
 	Kratos *kratos.Provider
 }
 
-type NewInput struct{}
+type NewInput struct {
+	Dependencies Dependencies
+}
 
-func New(i NewInput, d Dependencies) (*Provider, error) {
+func New(i NewInput) (*Provider, error) {
 	p := Provider{
-		d: d,
+		d: i.Dependencies,
 	}
 	return &p, nil
 }
@@ -45,7 +47,10 @@ func (p *Provider) RegisterHandles(mux *http.ServeMux) *http.ServeMux {
 
 	// Authentication Registration
 	mux.Handle("GET /auth/registration", p.baseMiddleware(p.handleGetAuthRegistration))
+	mux.Handle("GET /auth/registration/passkey", p.baseMiddleware(p.handleGetAuthRegistrationPasskey))
 	mux.Handle("POST /auth/registration", p.baseMiddleware(p.handlePostAuthRegistration))
+	mux.Handle("POST /auth/registration/oidc", p.baseMiddleware(p.handlePostAuthRegistrationOidc))
+	mux.Handle("POST /auth/registration/passkey", p.baseMiddleware(p.handlePostAuthRegistrationPasskey))
 
 	// Authentication Verification
 	mux.Handle("GET /auth/verification", p.baseMiddleware(p.handleGetAuthVerification))
@@ -113,15 +118,17 @@ func (p *Provider) loggingRquest(next http.Handler) http.Handler {
 func (p *Provider) setSession(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		output, err := p.d.Kratos.ToSession(kratos.ToSessionInput{
-			Cookie: r.Header.Get("Cookie"),
+		output, err := p.d.Kratos.Whoami(kratos.WhoamiInput{
+			Cookie:     r.Header.Get("Cookie"),
+			RemoteAddr: r.RemoteAddr,
 		})
-		if err != nil {
+		if err != nil || output.Session == nil {
 			ctx = context.WithValue(ctx, "session", nil)
 			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}
-		ctx = context.WithValue(ctx, "session", output.Session)
+		slog.Info(fmt.Sprintf("%v", output.Session))
+		ctx = context.WithValue(ctx, "session", *output.Session)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

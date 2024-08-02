@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 // Handler GET /my/password
@@ -23,24 +24,39 @@ func (p *Provider) handleGetMyPassword(w http.ResponseWriter, r *http.Request) {
 		flowID: r.URL.Query().Get("flow"),
 	}
 
-	// Setting Flow の作成 or 取得
 	// Setting flowを新規作成した場合は、FlowIDを含めてリダイレクト
-	output, err := p.d.Kratos.CreateOrGetSettingsFlow(kratos.CreateOrGetSettingsFlowInput{
+	if reqParams.flowID == "" {
+		output, err := p.d.Kratos.CreateSettingsFlow(kratos.CreateSettingsFlowInput{
+			Cookie: reqParams.cookie,
+			FlowID: reqParams.flowID,
+		})
+		if err != nil {
+			pkgVars.tmpl.ExecuteTemplate(w, "my/password/index.html", viewParameters(session, r, map[string]any{
+				"ErrorMessages": output.ErrorMessages,
+			}))
+			return
+		}
+		redirect(w, r, fmt.Sprintf("%s?flow=%s", "/my/password", output.FlowID))
+		return
+	}
+
+	// Setting Flow の作成 or 取得
+	output, err := p.d.Kratos.GetSettingsFlow(kratos.GetSettingsFlowInput{
 		Cookie: reqParams.cookie,
 		FlowID: reqParams.flowID,
 	})
-
 	if err != nil {
-		tmpl.ExecuteTemplate(w, "my/password/index.html", viewParameters(session, r, map[string]any{
+		pkgVars.tmpl.ExecuteTemplate(w, "my/password/index.html", viewParameters(session, r, map[string]any{
 			"ErrorMessages": output.ErrorMessages,
 		}))
+		return
 	}
 
 	// kratosのcookieをそのままブラウザへ受け渡す
 	setCookieToResponseHeader(w, output.Cookies)
 
 	// flowの情報に従ってレンダリング
-	tmpl.ExecuteTemplate(w, "my/password/index.html", viewParameters(session, r, map[string]any{
+	pkgVars.tmpl.ExecuteTemplate(w, "my/password/index.html", viewParameters(session, r, map[string]any{
 		"SettingsFlowID":       output.FlowID,
 		"CsrfToken":            output.CsrfToken,
 		"RedirectFromRecovery": reqParams.flowID == "recovery",
@@ -56,7 +72,7 @@ type handlePostMyPasswordRequestParams struct {
 }
 
 func (p *handlePostMyPasswordRequestParams) validate() map[string]string {
-	fieldErrors := validationFieldErrors(validate.Struct(p))
+	fieldErrors := validationFieldErrors(pkgVars.validate.Struct(p))
 	if p.password != p.passwordConfirmation {
 		fieldErrors["Password"] = "パスワードとパスワード確認が一致しません"
 	}
@@ -77,7 +93,7 @@ func (p *Provider) handlePostMyPassword(w http.ResponseWriter, r *http.Request) 
 	validationFieldErrors := reqParams.validate()
 	if len(validationFieldErrors) > 0 {
 		slog.Info(fmt.Sprintf("%v", validationFieldErrors))
-		tmpl.ExecuteTemplate(w, "my/password/_form.html", viewParameters(session, r, map[string]any{
+		pkgVars.tmpl.ExecuteTemplate(w, "my/password/_form.html", viewParameters(session, r, map[string]any{
 			"SettingsFlowID":       reqParams.flowID,
 			"CsrfToken":            reqParams.csrfToken,
 			"Password":             reqParams.password,
@@ -85,17 +101,19 @@ func (p *Provider) handlePostMyPassword(w http.ResponseWriter, r *http.Request) 
 		}))
 		return
 	}
+	slog.Info(fmt.Sprintf("%v", reqParams))
 
 	// Setting Flow 更新
-	output, err := p.d.Kratos.UpdateSettingsFlowPassword(kratos.UpdateSettingsFlowPasswordInput{
+	output, err := p.d.Kratos.UpdateSettingsFlow(kratos.UpdateSettingsFlowInput{
 		Cookie:    r.Header.Get("Cookie"),
 		FlowID:    reqParams.flowID,
 		CsrfToken: reqParams.csrfToken,
+		Method:    "password",
 		Password:  reqParams.password,
 	})
 	if err != nil {
 		slog.Info(err.Error())
-		tmpl.ExecuteTemplate(w, "my/password/_form.html", viewParameters(session, r, map[string]any{
+		pkgVars.tmpl.ExecuteTemplate(w, "my/password/_form.html", viewParameters(session, r, map[string]any{
 			"SettingsFlowID": reqParams.flowID,
 			"CsrfToken":      reqParams.csrfToken,
 			"Password":       reqParams.password,
@@ -106,7 +124,7 @@ func (p *Provider) handlePostMyPassword(w http.ResponseWriter, r *http.Request) 
 	// kratosのcookieをそのままブラウザへ受け渡す
 	setCookieToResponseHeader(w, output.Cookies)
 
-	redirect(w, r, "/auth/login")
+	redirect(w, r, "/")
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -125,36 +143,51 @@ func (p *Provider) handleGetMyProfile(w http.ResponseWriter, r *http.Request) {
 		flowID: r.URL.Query().Get("flow"),
 	}
 
-	// Setting Flow の作成 or 取得
 	// Setting flowを新規作成した場合は、FlowIDを含めてリダイレクト
-	output, err := p.d.Kratos.CreateOrGetSettingsFlow(kratos.CreateOrGetSettingsFlowInput{
+	if reqParams.flowID == "" {
+		output, err := p.d.Kratos.CreateSettingsFlow(kratos.CreateSettingsFlowInput{
+			Cookie: reqParams.cookie,
+			FlowID: reqParams.flowID,
+		})
+		if err != nil {
+			pkgVars.tmpl.ExecuteTemplate(w, "my/profile/index.html", viewParameters(session, r, map[string]any{
+				"ErrorMessages": output.ErrorMessages,
+			}))
+			return
+		}
+		redirect(w, r, fmt.Sprintf("%s?flow=%s", "/my/profile", output.FlowID))
+		return
+	}
+
+	// Setting Flow の作成 or 取得
+	output, err := p.d.Kratos.GetSettingsFlow(kratos.GetSettingsFlowInput{
 		Cookie: reqParams.cookie,
 		FlowID: reqParams.flowID,
 	})
 	if err != nil {
-		tmpl.ExecuteTemplate(w, "my/profile/index.html", viewParameters(session, r, map[string]any{
+		pkgVars.tmpl.ExecuteTemplate(w, "my/profile/index.html", viewParameters(session, r, map[string]any{
 			"ErrorMessages": output.ErrorMessages,
 		}))
+		return
 	}
 
 	// kratosのcookieをそのままブラウザへ受け渡す
 	setCookieToResponseHeader(w, output.Cookies)
 
 	// flowの情報に従ってレンダリング
-	email := session.GetValueFromTraits("email")
-	nickname := session.GetValueFromTraits("nickname")
-	birthdate := session.GetValueFromTraits("birthdate")
 	var information string
 	if existsAfterLoginHook(r, AFTER_LOGIN_HOOK_COOKIE_KEY_SETTINGS_PROFILE_UPDATE) {
 		information = "プロフィールを更新しました。"
 		deleteAfterLoginHook(w, AFTER_LOGIN_HOOK_COOKIE_KEY_SETTINGS_PROFILE_UPDATE)
 	}
-	tmpl.ExecuteTemplate(w, "my/profile/index.html", viewParameters(session, r, map[string]any{
+	pkgVars.tmpl.ExecuteTemplate(w, "my/profile/index.html", viewParameters(session, r, map[string]any{
 		"SettingsFlowID": output.FlowID,
 		"CsrfToken":      output.CsrfToken,
-		"Email":          email,
-		"Nickname":       nickname,
-		"Birthdate":      birthdate,
+		"Email":          session.Identity.Traits.Email,
+		"Firstname":      session.Identity.Traits.Firstname,
+		"Lastname":       session.Identity.Traits.Lastname,
+		"Nickname":       session.Identity.Traits.Nickname,
+		"Birthdate":      session.Identity.Traits.Birthdate.Format(pkgVars.birthdateFormat),
 		"Information":    information,
 	}))
 }
@@ -174,16 +207,30 @@ func (p *Provider) handleGetMyProfileEdit(w http.ResponseWriter, r *http.Request
 		flowID: r.URL.Query().Get("flow"),
 	}
 
-	// Setting Flow の作成 or 取得
 	// Setting flowを新規作成した場合は、FlowIDを含めてリダイレクト
-	output, err := p.d.Kratos.CreateOrGetSettingsFlow(kratos.CreateOrGetSettingsFlowInput{
+	if reqParams.flowID == "" {
+		output, err := p.d.Kratos.CreateSettingsFlow(kratos.CreateSettingsFlowInput{
+			Cookie: reqParams.cookie,
+		})
+		if err != nil {
+			pkgVars.tmpl.ExecuteTemplate(w, "my/profile/edit.html", viewParameters(session, r, map[string]any{
+				"ErrorMessages": output.ErrorMessages,
+			}))
+			return
+		}
+		redirect(w, r, fmt.Sprintf("%s?flow=%s", "/my/profile", output.FlowID))
+		return
+	}
+
+	output, err := p.d.Kratos.GetSettingsFlow(kratos.GetSettingsFlowInput{
 		Cookie: reqParams.cookie,
 		FlowID: reqParams.flowID,
 	})
 	if err != nil {
-		tmpl.ExecuteTemplate(w, "my/profile/edit.html", viewParameters(session, r, map[string]any{
+		pkgVars.tmpl.ExecuteTemplate(w, "my/profile/edit.html", viewParameters(session, r, map[string]any{
 			"ErrorMessages": output.ErrorMessages,
 		}))
+		return
 	}
 
 	// kratosのcookieをそのままブラウザへ受け渡す
@@ -192,25 +239,20 @@ func (p *Provider) handleGetMyProfileEdit(w http.ResponseWriter, r *http.Request
 	// セッションから現在の値を取得
 	params := loadProfileFromSessionIfEmpty(updateProfileParams{}, session)
 
-	var information string
-	if existsTraitsFieldsNotFilledIn(session) {
-		information = "プロフィールの入力をお願いします"
-	}
-
-	tmpl.ExecuteTemplate(w, "my/profile/edit.html", viewParameters(session, r, map[string]any{
+	pkgVars.tmpl.ExecuteTemplate(w, "my/profile/edit.html", viewParameters(session, r, map[string]any{
 		"SettingsFlowID": output.FlowID,
 		"CsrfToken":      output.CsrfToken,
 		"Email":          params.Email,
+		"Firstname":      params.Firstname,
+		"Lastname":       params.Lastname,
 		"Nickname":       params.Nickname,
 		"Birthdate":      params.Birthdate,
-		"Infomation":     information,
 	}))
 }
 
 // Handler GET /my/profile/_form
 type handleGetMyProfileFormRequestParams struct {
 	cookie string
-	flowID string
 }
 
 func (p *Provider) handleGetMyProfileForm(w http.ResponseWriter, r *http.Request) {
@@ -219,19 +261,16 @@ func (p *Provider) handleGetMyProfileForm(w http.ResponseWriter, r *http.Request
 
 	reqParams := handleGetMyProfileFormRequestParams{
 		cookie: r.Header.Get("Cookie"),
-		flowID: r.URL.Query().Get("flow"),
 	}
 
-	// Setting Flow の作成 or 取得
-	// Setting flowを新規作成した場合は、FlowIDを含めてリダイレクト
-	output, err := p.d.Kratos.CreateOrGetSettingsFlow(kratos.CreateOrGetSettingsFlowInput{
+	output, err := p.d.Kratos.CreateSettingsFlow(kratos.CreateSettingsFlowInput{
 		Cookie: reqParams.cookie,
-		FlowID: reqParams.flowID,
 	})
 	if err != nil {
-		tmpl.ExecuteTemplate(w, "my/profile/_form.html", viewParameters(session, r, map[string]any{
+		pkgVars.tmpl.ExecuteTemplate(w, "my/profile/_form.html", viewParameters(session, r, map[string]any{
 			"ErrorMessages": output.ErrorMessages,
 		}))
+		return
 	}
 
 	// kratosのcookieをそのままブラウザへ受け渡す
@@ -240,10 +279,12 @@ func (p *Provider) handleGetMyProfileForm(w http.ResponseWriter, r *http.Request
 	// セッションから現在の値を取得
 	params := loadProfileFromSessionIfEmpty(updateProfileParams{}, session)
 
-	tmpl.ExecuteTemplate(w, "my/profile/_form.html", viewParameters(session, r, map[string]any{
+	pkgVars.tmpl.ExecuteTemplate(w, "my/profile/_form.html", viewParameters(session, r, map[string]any{
 		"SettingsFlowID": output.FlowID,
 		"CsrfToken":      output.CsrfToken,
 		"Email":          params.Email,
+		"Firstname":      params.Firstname,
+		"Lastname":       params.Lastname,
 		"Nickname":       params.Nickname,
 		"Birthdate":      params.Birthdate,
 	}))
@@ -255,12 +296,14 @@ type handlePostMyProfileRequestPostForm struct {
 	flowID    string `validate:"required,uuid4"`
 	csrfToken string `validate:"required"`
 	Email     string `validate:"required,email" ja:"メールアドレス"`
+	Firstname string `validate:"required,min=5,max=20" ja:"氏名(性)"`
+	Lastname  string `validate:"required,min=5,max=20" ja:"氏名(名)"`
 	Nickname  string `validate:"required,min=5,max=20" ja:"ニックネーム"`
-	Birthdate string `validate:"required,datetime=2006-01-02" ja:"生年月日"`
+	Birthdate string `validate:"required,birthdate" ja:"生年月日"`
 }
 
 func (p *handlePostMyProfileRequestPostForm) validate() map[string]string {
-	fieldErrors := validationFieldErrors(validate.Struct(p))
+	fieldErrors := validationFieldErrors(pkgVars.validate.Struct(p))
 	return fieldErrors
 }
 
@@ -274,14 +317,19 @@ func (p *Provider) handlePostMyProfile(w http.ResponseWriter, r *http.Request) {
 		flowID:    r.URL.Query().Get("flow"),
 		csrfToken: r.PostFormValue("csrf_token"),
 		Email:     r.PostFormValue("email"),
+		Lastname:  r.PostFormValue("lastname"),
+		Firstname: r.PostFormValue("firstname"),
 		Nickname:  r.PostFormValue("nickname"),
 		Birthdate: r.PostFormValue("birthdate"),
 	}
 	validationFieldErrors := reqParams.validate()
 	if len(validationFieldErrors) > 0 {
-		tmpl.ExecuteTemplate(w, "auth/registration/_form.html", viewParameters(session, r, map[string]any{
+		pkgVars.tmpl.ExecuteTemplate(w, "my/profile/_form.html", viewParameters(session, r, map[string]any{
 			"RegistrationFlowID":   reqParams.flowID,
 			"CsrfToken":            reqParams.csrfToken,
+			"Email":                reqParams.Email,
+			"Firstname":            reqParams.Firstname,
+			"Lastname":             reqParams.Lastname,
 			"Nickname":             reqParams.Nickname,
 			"Birthdate":            reqParams.Birthdate,
 			"ValidationFieldError": validationFieldErrors,
@@ -289,11 +337,17 @@ func (p *Provider) handlePostMyProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	birthdate, err := time.Parse(pkgVars.birthdateFormat, reqParams.Birthdate)
+	if err != nil {
+		slog.Error(err.Error())
+	}
 	params := loadProfileFromSessionIfEmpty(updateProfileParams{
 		FlowID:    reqParams.flowID,
 		Email:     reqParams.Email,
+		Firstname: reqParams.Firstname,
+		Lastname:  reqParams.Lastname,
 		Nickname:  reqParams.Nickname,
-		Birthdate: reqParams.Birthdate,
+		Birthdate: birthdate,
 	}, session)
 
 	deleteAfterLoginHook(w, AFTER_LOGIN_HOOK_COOKIE_KEY_SETTINGS_PROFILE_UPDATE)
@@ -305,38 +359,45 @@ func (p *Provider) handlePostMyProfile(w http.ResponseWriter, r *http.Request) {
 			Params:    params,
 		}, AFTER_LOGIN_HOOK_COOKIE_KEY_SETTINGS_PROFILE_UPDATE)
 		if err != nil {
-			tmpl.ExecuteTemplate(w, "my/profile/_form.html", viewParameters(session, r, map[string]any{
+			pkgVars.tmpl.ExecuteTemplate(w, "my/profile/_form.html", viewParameters(session, r, map[string]any{
 				"SettingsFlowID": reqParams.flowID,
 				"CsrfToken":      reqParams.csrfToken,
 				"ErrorMessages":  []string{"Error"},
 				"Email":          params.Email,
+				"Firstname":      params.Firstname,
+				"Lastname":       params.Lastname,
 				"Nickname":       params.Nickname,
 				"Birthdate":      params.Birthdate,
 			}))
 		} else {
 			returnTo := url.QueryEscape("/my/profile")
 			slog.Info(returnTo)
-			redirect(w, r, "/auth/login")
+			redirect(w, r, fmt.Sprintf("/auth/login?return_to=%s", returnTo))
 		}
 		return
 	}
 
 	// Settings Flow の送信(完了)
-	output, err := p.d.Kratos.UpdateSettingsFlowProfile(kratos.UpdateSettingsFlowProfileInput{
+	output, err := p.d.Kratos.UpdateSettingsFlow(kratos.UpdateSettingsFlowInput{
 		Cookie:    reqParams.cookie,
 		FlowID:    reqParams.flowID,
 		CsrfToken: reqParams.csrfToken,
-		Traits: map[string]interface{}{
-			"email":     params.Email,
-			"nickname":  params.Nickname,
-			"birthdate": params.Birthdate,
+		Traits: kratos.Traits{
+			Email:     params.Email,
+			Firstname: params.Firstname,
+			Lastname:  params.Lastname,
+			Nickname:  params.Nickname,
+			Birthdate: params.Birthdate,
 		},
 	})
 	if err != nil {
-		tmpl.ExecuteTemplate(w, "my/profile/_form.html", viewParameters(session, r, map[string]any{
+		slog.Error(err.Error())
+		pkgVars.tmpl.ExecuteTemplate(w, "my/profile/_form.html", viewParameters(session, r, map[string]any{
 			"CsrfToken":     reqParams.csrfToken,
 			"ErrorMessages": output.ErrorMessages,
 			"Email":         params.Email,
+			"Firstname":     params.Firstname,
+			"Lastname":      params.Lastname,
 			"Nickname":      params.Nickname,
 			"Birthdate":     params.Birthdate,
 		}))
@@ -351,22 +412,30 @@ func (p *Provider) handlePostMyProfile(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateProfileParams struct {
-	FlowID    string `json:"flow_id"`
-	Email     string `json:"email"`
-	Nickname  string `json:"nickname"`
-	Birthdate string `json:"birthdate"`
+	FlowID    string    `json:"flow_id"`
+	Email     string    `json:"email"`
+	Firstname string    `json:"firstname"`
+	Lastname  string    `json:"lastname"`
+	Nickname  string    `json:"nickname"`
+	Birthdate time.Time `json:"birthdate"`
 }
 
 func loadProfileFromSessionIfEmpty(params updateProfileParams, session *kratos.Session) updateProfileParams {
 	if session != nil {
 		if params.Email == "" {
-			params.Email = session.GetValueFromTraits("email")
+			params.Email = session.Identity.Traits.Email
+		}
+		if params.Firstname == "" {
+			params.Firstname = session.Identity.Traits.Firstname
+		}
+		if params.Lastname == "" {
+			params.Lastname = session.Identity.Traits.Lastname
 		}
 		if params.Nickname == "" {
-			params.Nickname = session.GetValueFromTraits("nickname")
+			params.Nickname = session.Identity.Traits.Nickname
 		}
-		if params.Birthdate == "" {
-			params.Birthdate = session.GetValueFromTraits("birthdate")
+		if params.Birthdate.IsZero() {
+			params.Birthdate = session.Identity.Traits.Birthdate
 		}
 	}
 	return params
@@ -378,11 +447,13 @@ func (p *Provider) updateProfile(w http.ResponseWriter, r *http.Request, params 
 
 	params = loadProfileFromSessionIfEmpty(updateProfileParams{
 		Email:     params.Email,
+		Firstname: params.Firstname,
+		Lastname:  params.Lastname,
 		Nickname:  params.Nickname,
 		Birthdate: params.Birthdate,
 	}, session)
 
-	output, err := p.d.Kratos.CreateOrGetSettingsFlow(kratos.CreateOrGetSettingsFlowInput{
+	output, err := p.d.Kratos.GetSettingsFlow(kratos.GetSettingsFlowInput{
 		Cookie: r.Header.Get("Cookie"),
 		FlowID: params.FlowID,
 	})
@@ -392,14 +463,16 @@ func (p *Provider) updateProfile(w http.ResponseWriter, r *http.Request, params 
 	}
 
 	// Settings Flow の送信(完了)
-	updateOutput, err := p.d.Kratos.UpdateSettingsFlowProfile(kratos.UpdateSettingsFlowProfileInput{
+	updateOutput, err := p.d.Kratos.UpdateSettingsFlow(kratos.UpdateSettingsFlowInput{
 		Cookie:    r.Header.Get("Cookie"),
 		FlowID:    output.FlowID,
 		CsrfToken: output.CsrfToken,
-		Traits: map[string]interface{}{
-			"email":     params.Email,
-			"nickname":  params.Nickname,
-			"birthdate": params.Birthdate,
+		Traits: kratos.Traits{
+			Email:     params.Email,
+			Firstname: params.Firstname,
+			Lastname:  params.Lastname,
+			Nickname:  params.Nickname,
+			Birthdate: params.Birthdate,
 		},
 	})
 	if err != nil {

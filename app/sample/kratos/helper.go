@@ -1,82 +1,43 @@
 package kratos
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
-	"net/http"
-	"reflect"
-
-	kratosclientgo "github.com/ory/kratos-client-go"
+	"time"
 )
 
-type ResponseType interface {
-	kratosclientgo.RegistrationFlow |
-		kratosclientgo.VerificationFlow |
-		kratosclientgo.LoginFlow |
-		kratosclientgo.RecoveryFlow |
-		kratosclientgo.SettingsFlow |
-		kratosclientgo.SuccessfulNativeRegistration |
-		kratosclientgo.ErrorBrowserLocationChangeRequired
-}
+// // goのv1.0.0のSDKには不具合があるらしく、恐らく各種flowをUnmarshalしてもnode.attributes配下を取得できない模様
+// // https://github.com/ory/sdk/issues/292
+// // 仕方ないので、interface{}型でjsonを直接パースし、そこから必要な値を取得する
+// func readHttpResponseBody(r *http.Response) (interface{}, error) {
+// 	var result interface{}
 
-// goのv1.0.0のSDKには不具合があるらしく、恐らく各種flowをUnmarshalしてもnode.attributes配下を取得できない模様
-// https://github.com/ory/sdk/issues/292
-// 仕方ないので、interface{}型でjsonを直接パースし、そこから必要な値を取得する
-func readHttpResponseBody(r *http.Response) (interface{}, error) {
-	var result interface{}
+// 	defer r.Body.Close()
+// 	body, err := io.ReadAll(r.Body)
+// 	if err != nil {
+// 		slog.Error(err.Error())
+// 		return result, err
+// 	}
 
-	defer r.Body.Close()
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		slog.Error(err.Error())
-		return result, err
-	}
+// 	if err := json.Unmarshal(body, &result); err != nil {
+// 		slog.Error(err.Error())
+// 		return result, err
+// 	}
+// 	return result, nil
+// }
 
-	if err := json.Unmarshal(body, &result); err != nil {
-		slog.Error(err.Error())
-		return result, err
-	}
-	return result, nil
-}
+// func getVerificationFlowIDFromSuccessfulNativeRegistration(s *kratosclientgo.SuccessfulNativeRegistration) string {
+// 	for _, c := range s.ContinueWith {
+// 		return c.ContinueWithVerificationUi.Flow.Id
+// 	}
+// 	slog.Error("Missing csrf_token")
+// 	return ""
+// }
 
-// goのv1.0.0のSDKには不具合があるらしく、恐らく各種flowをUnmarshalしてもnode.attributes配下を取得できない模様
-// https://github.com/ory/sdk/issues/292
-// 仕方ないので、interface{}型でjsonを直接パースし、そこから必要な値を取得する
-// readHttpResponseBody で取得したjson(interface{})から csrf_token を取得
-func getCsrfTokenFromResponseBody(responseBody interface{}) string {
-	b, ok := responseBody.(map[string]interface{})
-	if !ok {
-		slog.Error("Fail type assertion responseBody to map[string]interface{}")
-		return ""
-	}
-	ui, ok := b["ui"].(map[string]interface{})
-	if !ok {
-		slog.Error("Fail type assertion ui to map[string]interface{}")
-		return ""
-	}
-	nodes, ok := ui["nodes"].([]interface{})
-	if !ok {
-		slog.Error("Fail type assertion nodes to []interface{}")
-		return ""
-	}
-
-	for _, v := range nodes {
-		node, ok := v.(map[string]interface{})
-		if !ok {
-			slog.Error("Fail type assertion node to map[string]interface{}")
-			return ""
-		}
-
-		attrs, ok := node["attributes"].(map[string]interface{})
-		if !ok {
-			slog.Error("Fail type assertion attributes to map[string]interface{}")
-			return ""
-		}
-
-		if attrs["name"] != nil && attrs["name"].(string) == "csrf_token" {
-			return attrs["value"].(string)
+func getCsrfTokenFromFlowUi(ui uiContainer) string {
+	for _, node := range ui.Nodes {
+		if node.Attributes.Name == "csrf_token" {
+			return node.Attributes.Value.(string)
 		}
 	}
 	return ""
@@ -124,108 +85,166 @@ func getContinueWithVerificationFlowId(responseBody interface{}) string {
 			return ""
 		}
 
-		if action == "show_verification_ui" {
-			return flowID
-		}
-	}
+// // readHttpResponseBody で取得したjson(interface{})から continue_with.verification_ui.flow.id を取得
+// func getContinueWithVerificationFlowId(responseBody interface{}) string {
+// 	b, ok := responseBody.(map[string]interface{})
+// 	if !ok {
+// 		slog.Error("Fail type assertion responseBody to map[string]interface{}")
+// 		return ""
+// 	}
 
-	slog.Error("Missing verification flow id")
-	return ""
-}
+// 	continueWith, ok := b["continue_with"].([]interface{})
+// 	if !ok {
+// 		slog.Error("Fail type assertion continue_with to []interface{}")
+// 		return ""
+// 	}
 
-// refirect browser to を取得
-func getRedirectBrowserToFromError(err error) string {
-	slog.Info(fmt.Sprintf("%v", err))
-	oerr, ok := err.(*kratosclientgo.GenericOpenAPIError)
-	if !ok {
-		return ""
-	}
+// 	for _, v := range continueWith {
+// 		c, ok := v.(map[string]interface{})
+// 		if !ok {
+// 			slog.Error("Fail type assertion continue_with to map[string]interface{}")
+// 			return ""
+// 		}
 
-	slog.Info(fmt.Sprintf("%v", oerr))
-	slog.Info(fmt.Sprintf("%v", oerr.Model()))
-	if m, ok := oerr.Model().(kratosclientgo.ErrorBrowserLocationChangeRequired); ok {
-		if m.RedirectBrowserTo != nil {
-			return *m.RedirectBrowserTo
-		}
-	}
-	slog.Error("Missing redirect_browser_to")
-	return ""
-}
+// 		action, ok := c["action"].(string)
+// 		if !ok {
+// 			slog.Error("Fail type assertion action to string")
+// 			return ""
+// 		}
 
-// kratos のエラーレスポンスからエラーメッセージを取得
-func getErrorMessages(err error) []string {
-	slog.Info(fmt.Sprintf("%v", err))
-	oerr, ok := err.(*kratosclientgo.GenericOpenAPIError)
-	if !ok {
-		return []string{}
-	}
+// 		flow, ok := c["flow"].(map[string]interface{})
+// 		if !ok {
+// 			slog.Error("Fail type assertion flow to map[string]interface{}")
+// 			return ""
+// 		}
 
-	slog.Info(fmt.Sprintf("%v", oerr))
-	slog.Info(fmt.Sprintf("%v", oerr.Model()))
+// 		flowID, ok := flow["id"].(string)
+// 		if !ok {
+// 			slog.Error("Fail type assertion flow.id to string")
+// 			return ""
+// 		}
 
-	var messages []string
-	fmt.Println(reflect.TypeOf(oerr.Model()))
+// 		if action == "show_verification_ui" {
+// 			return flowID
+// 		}
+// 	}
 
-	if m, ok := oerr.Model().(kratosclientgo.RegistrationFlow); ok {
-		slog.Info("RegistrationFlow")
-		messages = getErrorMessagesFromResigtrationFlow(m)
-	}
-	if m, ok := oerr.Model().(kratosclientgo.VerificationFlow); ok {
-		slog.Info("VerificationFlow")
-		messages = getErrorMessagesFromVerificationFlow(m)
-	}
-	if m, ok := oerr.Model().(kratosclientgo.LoginFlow); ok {
-		slog.Info("LoginFlow")
-		messages = getErrorMessagesFromLoginFlow(m)
-	}
-	if m, ok := oerr.Model().(kratosclientgo.RecoveryFlow); ok {
-		slog.Info("RecoveryFlow")
-		messages = getErrorMessagesFromRecoveryFlow(m)
-	}
-	if m, ok := oerr.Model().(kratosclientgo.SettingsFlow); ok {
-		slog.Info("SettingsFlow")
-		messages = getErrorMessagesFromSettingsFlow(m)
-	}
+// 	slog.Error("Missing verification flow id")
+// 	return ""
+// }
 
-	if m, ok := oerr.Model().(kratosclientgo.ErrorBrowserLocationChangeRequired); ok {
-		slog.Info("ErrorBrowserLocationChangeRequired")
-		messages = getErrorMessagesFromBrowserLocationChangeRequired(m)
-	}
+// // refirect browser to を取得 (SDKバグ回避暫定用)
+// func getRedirectBrowserToFromHttpResponse(r *http.Response) string {
+// 	var e errorBrowserLocationChangeRequired
 
-	if m, ok := oerr.Model().(kratosclientgo.GenericError); ok {
-		slog.Info("GenericError")
-		messages = getErrorMessagesFromGenericError(m)
-	}
+// 	defer r.Body.Close()
+// 	body, err := io.ReadAll(r.Body)
+// 	if err != nil {
+// 		slog.Error(err.Error())
+// 		return ""
+// 	}
 
-	if m, ok := oerr.Model().(kratosclientgo.ErrorGeneric); ok {
-		slog.Info("GenericError")
-		messages = getErrorMessagesFromErrorGeneric(m)
-	}
+// 	if err := json.Unmarshal(body, &e); err != nil {
+// 		slog.Error(err.Error())
+// 		return ""
+// 	}
 
-	return messages
-}
+// 	return e.RedirectBrowserTo
+// }
 
-func getErrorMessagesFromResigtrationFlow(flow kratosclientgo.RegistrationFlow) []string {
-	return getErrorMessagesFromUi(flow.Ui)
-}
+// // refirect browser to を取得 (本来はこちらを使用したい)
+// func getRedirectBrowserToFromError(err error) string {
+// 	slog.Info(fmt.Sprintf("%v", err))
+// 	oerr, ok := err.(*kratosclientgo.GenericOpenAPIError)
+// 	if !ok {
+// 		return ""
+// 	}
 
-func getErrorMessagesFromVerificationFlow(flow kratosclientgo.VerificationFlow) []string {
-	return getErrorMessagesFromUi(flow.Ui)
-}
+// 	slog.Info(fmt.Sprintf("%v", oerr))
+// 	slog.Info(fmt.Sprintf("%v", oerr.Model()))
+// 	if m, ok := oerr.Model().(kratosclientgo.ErrorBrowserLocationChangeRequired); ok {
+// 		if m.RedirectBrowserTo != nil {
+// 			return *m.RedirectBrowserTo
+// 		}
+// 	}
+// 	slog.Error("Missing redirect_browser_to")
+// 	return ""
+// }
 
-func getErrorMessagesFromLoginFlow(flow kratosclientgo.LoginFlow) []string {
-	return getErrorMessagesFromUi(flow.Ui)
-}
+// // kratos のエラーレスポンスからエラーメッセージを取得
+// func getErrorMessages(err error) []string {
+// 	slog.Info(fmt.Sprintf("%v", err))
+// 	oerr, ok := err.(*kratosclientgo.GenericOpenAPIError)
+// 	if !ok {
+// 		return []string{}
+// 	}
 
-func getErrorMessagesFromRecoveryFlow(flow kratosclientgo.RecoveryFlow) []string {
-	return getErrorMessagesFromUi(flow.Ui)
-}
+// 	slog.Info(fmt.Sprintf("%v", oerr))
+// 	slog.Info(fmt.Sprintf("%v", oerr.Model()))
 
-func getErrorMessagesFromSettingsFlow(flow kratosclientgo.SettingsFlow) []string {
-	return getErrorMessagesFromUi(flow.Ui)
-}
+// 	var messages []string
+// 	fmt.Println(reflect.TypeOf(oerr.Model()))
 
-func getErrorMessagesFromUi(ui kratosclientgo.UiContainer) []string {
+// 	if m, ok := oerr.Model().(kratosUpdateRegistrationFlowBadRequestErrorResponse); ok {
+// 		slog.Info("RegistrationFlow")
+// 		messages = getErrorMessagesFromResigtrationFlow(m)
+// 	}
+// 	if m, ok := oerr.Model().(verificationFlow); ok {
+// 		slog.Info("VerificationFlow")
+// 		messages = getErrorMessagesFromVerificationFlow(m)
+// 	}
+// 	if m, ok := oerr.Model().(loginFlow); ok {
+// 		slog.Info("LoginFlow")
+// 		messages = getErrorMessagesFromLoginFlow(m)
+// 	}
+// 	if m, ok := oerr.Model().(recoveryFlow); ok {
+// 		slog.Info("RecoveryFlow")
+// 		messages = getErrorMessagesFromRecoveryFlow(m)
+// 	}
+// 	if m, ok := oerr.Model().(settingsFlow); ok {
+// 		slog.Info("SettingsFlow")
+// 		messages = getErrorMessagesFromSettingsFlow(m)
+// 	}
+
+// 	// if m, ok := oerr.Model().(errorBrowserLocationChangeRequired); ok {
+// 	// 	slog.Info("ErrorBrowserLocationChangeRequired")
+// 	// 	messages = getErrorMessagesFromBrowserLocationChangeRequired(m)
+// 	// }
+
+// 	if m, ok := oerr.Model().(genericError); ok {
+// 		slog.Info("GenericError")
+// 		messages = getErrorMessagesFromGenericError(m)
+// 	}
+
+// 	if m, ok := oerr.Model().(errorGeneric); ok {
+// 		slog.Info("GenericError")
+// 		messages = getErrorMessagesFromErrorGeneric(m)
+// 	}
+
+// 	return messages
+// }
+
+// func getErrorMessagesFromResigtrationFlow(flow kratosUpdateRegistrationFlowBadRequestErrorResponse) []string {
+// 	return getErrorMessagesFromUi(*flow.Ui)
+// }
+
+// func getErrorMessagesFromVerificationFlow(flow verificationFlow) []string {
+// 	return getErrorMessagesFromUi(flow.Ui)
+// }
+
+// func getErrorMessagesFromLoginFlow(flow loginFlow) []string {
+// 	return getErrorMessagesFromUi(flow.Ui)
+// }
+
+// func getErrorMessagesFromRecoveryFlow(flow recoveryFlow) []string {
+// 	return getErrorMessagesFromUi(flow.Ui)
+// }
+
+// func getErrorMessagesFromSettingsFlow(flow settingsFlow) []string {
+// 	return getErrorMessagesFromUi(flow.Ui)
+// }
+
+func getErrorMessagesFromUi(ui uiContainer) []string {
 	slog.Info("getErrorMessagesFromUi")
 
 	slog.Info(fmt.Sprintf("%v", ui))
@@ -233,11 +252,11 @@ func getErrorMessagesFromUi(ui kratosclientgo.UiContainer) []string {
 	for _, v := range ui.Messages {
 		slog.Info(fmt.Sprintf("%v", v))
 		if v.Type == "error" {
-			slog.Info(fmt.Sprintf("%v", v.Id))
+			slog.Info(fmt.Sprintf("%v", v.ID))
 			slog.Info(fmt.Sprintf("%v", v.Text))
 			// [TODO] 日本語化
 			// https://www.ory.sh/docs/kratos/concepts/ui-user-interface#machine-readable-format
-			if v.Id == 4000007 {
+			if v.ID == 4000007 {
 				messages = append(messages, "既に登録済みメールアドレスメールです")
 			} else {
 				messages = append(messages, v.Text)
@@ -248,24 +267,46 @@ func getErrorMessagesFromUi(ui kratosclientgo.UiContainer) []string {
 	return messages
 }
 
-func getErrorMessagesFromBrowserLocationChangeRequired(err kratosclientgo.ErrorBrowserLocationChangeRequired) []string {
-	return getErrorMessagesFromGenericError(err.Error.Error)
+func getDuplicateIdentifierFromUi(ui uiContainer) string {
+	slog.Info(fmt.Sprintf("%v", ui))
+	for _, v := range ui.Messages {
+		slog.Info(fmt.Sprintf("%v", v))
+		if v.ID == 1010016 && v.Type == "info" {
+			slog.Info(fmt.Sprintf("%v", v.ID))
+			slog.Info(fmt.Sprintf("%v", v.Text))
+			return v.Context["duplicateIdentifier"].(string)
+		}
+	}
+
+	return ""
 }
 
-func getErrorMessagesFromGenericError(err kratosclientgo.GenericError) []string {
+// func getErrorMessagesFromBrowserLocationChangeRequired(err errorBrowserLocationChangeRequired) []string {
+// 	return getErrorMessagesFromGenericError(err.Error)
+// }
+
+func getErrorMessagesFromGenericError(err genericError) []string {
 	slog.Info("getErrorMessagesFromGenericError")
-	if err.Id != nil {
-		slog.Info(*err.Id)
-		// [TODO] 日本語化
-		// https://www.ory.sh/docs/kratos/concepts/ui-user-interface#ui-error-codes
-		if *err.Id == "security_csrf_violation" {
-			return []string{"恐れ入りますが、画面を更新してもう一度お試しください"}
-		}
+	slog.Info(err.ID)
+	// [TODO] 日本語化
+	// https://www.ory.sh/docs/kratos/concepts/ui-user-interface#ui-error-codes
+	if err.ID == "security_csrf_violation" {
+		return []string{"恐れ入りますが、画面を更新してもう一度お試しください"}
 	}
 	return []string{err.Message}
 }
 
-func getErrorMessagesFromErrorGeneric(err kratosclientgo.ErrorGeneric) []string {
+func getErrorMessagesFromErrorGeneric(err errorGeneric) []string {
 	slog.Info("getErrorMessagesFromErrorGeneric")
 	return getErrorMessagesFromGenericError(err.Error)
+}
+
+// セッションがprivileged_session_max_age を過ぎているかどうかを返却する
+func (s *Session) NeedLoginWhenPrivilegedAccess() bool {
+	authenticateAt := s.AuthenticatedAt.In(pkgVars.locationJst)
+	if authenticateAt.Before(time.Now().Add(-time.Second * pkgVars.privilegedAccessLimitMinutes)) {
+		return true
+	} else {
+		return false
+	}
 }

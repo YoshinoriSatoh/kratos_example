@@ -21,6 +21,7 @@
         name="email" 
         value="yoshinori.satoh.tokyo@gmail.com"
         placeholder="例) niko-chan@kratos-example.com"
+        value="{{.Traits.Email}}"
         {{if .ValidationFieldError.Email}}
         class="input input-bordered input-error"
         {{else}}
@@ -63,6 +64,61 @@
         value="Overwatch2024!@"
         class="input input-bordered"
       >
+    </label>
+
+    <label class="form-control">
+      <div class="label">
+        <span class="label-text">氏名</span>
+      </div>
+      <div class="grid grid-cols-12">
+        <div class="container col-span-6">
+          性
+          <input 
+            id="lastname"
+            name="traits.lastname" 
+            value="{{.Traits.Lastname}}"
+            class="input input-bordered"
+          />
+          <div class="text-red-500 text-xs">{{.ValidationFieldError.Firstname}}</div>
+        </div>
+        <div class="container col-span-6">
+          名 
+          <input 
+            id="firstname"
+            name="traits.firstname" 
+            value="{{.Traits.Firstname}}"
+            class="input input-bordered"
+          />
+          <div class="text-red-500 text-xs">{{.ValidationFieldError.Lastname}}</div>
+        </div>
+      </div>
+    </label>
+
+    <label class="form-control">
+      <div class="label">
+        <span class="label-text">ニックネーム</span>
+      </div>
+      <input 
+        id="nickname"
+        name="traits.nickname" 
+        value="{{.Traits.Nickname}}"
+        class="input input-bordered"
+      />
+      <div class="text-red-500 text-xs">{{.ValidationFieldError.Nickname}}</div>
+    </label>
+
+    <label class="form-control">
+      <div class="label">
+        <span class="label-text">生年月日</span>
+      </div>
+      <input 
+        id="birthdate"
+        name="traits.birthdate" 
+        type="date"
+        value="{{.Traits.Birthdate}}"
+        class="input input-bordered"
+      />
+      <div class="text-red-500 text-xs">{{.ValidationFieldError.Birthdate}}</div>
     </label>
   </div>
 

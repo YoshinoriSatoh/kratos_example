@@ -1,4 +1,4 @@
-version: v1.0.0
+version: v1.2.0
 
 identity:
   default_schema_id: user_v1
@@ -14,6 +14,21 @@ serve:
     base_url: http://localhost:4433
     request_log:
       disable_for_health: true
+    cors:
+      allowed_origins:
+        - http://localhost:3000
+        - http://kratos:4433
+      allowed_methods:
+        - OPTIONS
+        - GET
+        - POST
+      allowed_headers:
+        - "*"
+      exposed_headers:
+        - "*"
+      allow_credentials: true
+      debug: true
+      enabled: true
   admin:
     port: 4434
     base_url: http://localhost:4434
@@ -34,10 +49,49 @@ selfservice:
         identifier_similarity_check_enabled: true
     profile:
       enabled: true
+    oidc:
+      enabled: true
+      config:
+        providers:
+          - id: google
+            provider: google
+            client_id: 181885051443-eslsbl8qs7fp4593ureptlq4p1kp48d0.apps.googleusercontent.com
+            client_secret: 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
+            mapper_url: file:///etc/config/kratos/data-mappers/google.jsonnet
+            issuer_url: https://accounts.google.com
+            auth_url: https://accounts.google.com/o/oauth2/v2/auth
+            token_url: https://www.googleapis.com/oauth2/v4/token
+            scope:
+              - email
+              - profile
+              - openid
+    # webauthn:
+    #   enabled: true
+    #   config:
+    #     passwordless: true
+    #     rp:
+    #       display_name: Ory Foundation
+    #       id: localhost
+    #       icon: https://www.ory.sh/an-icon.png
+    # passkey:
+    #   enabled: true
+    #   config:
+    #     rp:
+    #       display_name: "My Display Name"
+    #       id: localhost
+    #       origins:
+    #         - http://localhost:4433
+    #         - http://localhost:3000
   flows:
     registration:
       enabled: true
       ui_url: http://localhost:3000/auth/registration
+      after:
+        oidc:
+          hooks:
+            - hook: session 
+          default_browser_return_url: http://localhost:3000/
+      enable_legacy_one_step: true
     verification:
       enabled: true
       ui_url: http://localhost:3000/auth/verification
@@ -67,7 +121,13 @@ selfservice:
 session:
   cookie:
     name: "kratos_session"
-
+secrets:
+  cookie:
+    - ipsumipsumipsumi
+  cipher:
+    - ipsumipsumipsumipsumipsumipsumip
+  default:
+    - ipsumipsumipsumi
 courier:
   smtp:
     connection_uri: smtps://test:test@mailslurper:1025/?skip_ssl_verify=true

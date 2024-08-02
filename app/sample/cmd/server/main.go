@@ -23,6 +23,9 @@ func init() {
 	// Init packages
 	kratos.Init(kratos.InitInput{
 		PrivilegedAccessLimitMinutes: 10,
+		KratosPublicEndpoint:         "http://kratos:4433",
+		KratosAdminEndpoint:          "http://kratos:4434",
+		BirthdateFormat:              "2006-01-02",
 	})
 
 	handler.Init(handler.InitInput{
@@ -32,6 +35,7 @@ func init() {
 			Domain:            "localhost",
 			Secure:            false,
 		},
+		BirthdateFormat: "2006-01-02",
 	})
 
 	// Create package providers with dependencies
@@ -39,18 +43,18 @@ func init() {
 
 	kratosProvider, err = kratos.New(
 		kratos.NewInput{
-			KratosPublicEndpoint: "http://kratos:4433",
+			Dependencies: kratos.Dependencies{},
 		},
-		kratos.Dependencies{},
 	)
 	if err != nil {
 		panic(err)
 	}
 
 	handlerProvider, err = handler.New(
-		handler.NewInput{},
-		handler.Dependencies{
-			Kratos: kratosProvider,
+		handler.NewInput{
+			Dependencies: handler.Dependencies{
+				Kratos: kratosProvider,
+			},
 		},
 	)
 	if err != nil {

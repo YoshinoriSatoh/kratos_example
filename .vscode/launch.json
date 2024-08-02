@@ -1,0 +1,20 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug API Container",
+      "type": "go",
+      "debugAdapter": "dlv-dap",
+      "request": "attach",
+      "mode": "remote",
+      "remotePath": "/root/app/cmd/server",
+      "port": 2345,
+      "substitutePath": [
+        {
+          "from": "${workspaceFolder}/app/sample",
+          "to": "/root/app"
+        }
+      ] 
+    }
+  ]
+}

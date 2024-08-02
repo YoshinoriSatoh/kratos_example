@@ -1,28 +1,19 @@
 package kratos
 
-import (
-	kratosclientgo "github.com/ory/kratos-client-go"
-)
-
 type Provider struct {
-	d                  Dependencies
-	kratosPublicClient *kratosclientgo.APIClient
+	d Dependencies
 }
 
 type Dependencies struct {
 }
 
 type NewInput struct {
-	KratosPublicEndpoint string
+	Dependencies Dependencies
 }
 
-func New(i NewInput, d Dependencies) (*Provider, error) {
+func New(i NewInput) (*Provider, error) {
 	p := Provider{
-		d: d,
+		d: i.Dependencies,
 	}
-	kratosPublicConfigration := kratosclientgo.NewConfiguration()
-	kratosPublicConfigration.Servers = []kratosclientgo.ServerConfiguration{{URL: i.KratosPublicEndpoint}}
-	p.kratosPublicClient = kratosclientgo.NewAPIClient(kratosPublicConfigration)
-
 	return &p, nil
 }

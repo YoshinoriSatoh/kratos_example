@@ -32,7 +32,7 @@ func (p *Provider) handleGetItemDetail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	item := items[reqParams.itemID]
-	tmpl.ExecuteTemplate(w, "item/detail.html", viewParameters(session, r, map[string]any{
+	pkgVars.tmpl.ExecuteTemplate(w, "item/detail.html", viewParameters(session, r, map[string]any{
 		"ItemID":      itemID,
 		"Image":       item.Image,
 		"Name":        item.Name,
@@ -63,12 +63,12 @@ func (p *Provider) handleGetItemPurchase(w http.ResponseWriter, r *http.Request)
 
 	if isAuthenticated(session) {
 		if r.Header.Get("HX-Request") == "true" {
-			tmpl.ExecuteTemplate(w, "item/_purchase.html", viewParameters(session, r, viewParams))
+			pkgVars.tmpl.ExecuteTemplate(w, "item/_purchase.html", viewParameters(session, r, viewParams))
 		} else {
-			tmpl.ExecuteTemplate(w, "item/purchase.html", viewParameters(session, r, viewParams))
+			pkgVars.tmpl.ExecuteTemplate(w, "item/purchase.html", viewParameters(session, r, viewParams))
 		}
 	} else {
-		tmpl.ExecuteTemplate(w, "item/_purchase_without_auth.html", viewParameters(session, r, viewParams))
+		pkgVars.tmpl.ExecuteTemplate(w, "item/_purchase_without_auth.html", viewParameters(session, r, viewParams))
 	}
 }
 
@@ -95,5 +95,5 @@ func (p *Provider) handlePostItemPurchase(w http.ResponseWriter, r *http.Request
 		"Price":  item.Price,
 	}
 
-	tmpl.ExecuteTemplate(w, "item/_purchase_complete.html", viewParameters(session, r, viewParams))
+	pkgVars.tmpl.ExecuteTemplate(w, "item/_purchase_complete.html", viewParameters(session, r, viewParams))
 }
