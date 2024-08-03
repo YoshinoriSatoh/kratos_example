@@ -27,6 +27,32 @@
 
     <label class="form-control">
       <div class="label">
+        <span class="label-text">氏名</span>
+      </div>
+      <div class="grid grid-cols-12">
+        <div class="container col-span-6">
+          <input 
+            id="lastname"
+            name="lastname" 
+            value="{{.Lastname}}"
+            class="input input-bordered"
+            disabled
+          />
+        </div>
+        <div class="container col-span-6">
+          <input 
+            id="firstname"
+            name="firstname" 
+            value="{{.Firstname}}"
+            class="input input-bordered"
+            disabled
+          />
+        </div>
+      </div>
+    </label>
+
+    <label class="form-control">
+      <div class="label">
         <span class="label-text">ニックネーム</span>
       </div>
       <input 

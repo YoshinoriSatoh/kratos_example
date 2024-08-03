@@ -12,11 +12,6 @@ import (
 
 func getSession(ctx context.Context) *kratos.Session {
 	session := ctx.Value("session")
-	slog.Info(fmt.Sprintf("%v", session))
-	slog.Info(fmt.Sprintf("%v", session))
-	slog.Info(fmt.Sprintf("%v", session))
-	slog.Info(fmt.Sprintf("%v", session))
-	slog.Info(fmt.Sprintf("%v", session))
 	if session == nil {
 		return nil
 	}
@@ -37,15 +32,6 @@ func isAuthenticated(session *kratos.Session) bool {
 	}
 }
 
-func existsTraitsFieldsNotFilledIn(session *kratos.Session) bool {
-	if session.GetValueFromTraits("email") == "" ||
-		session.GetValueFromTraits("nickname") == "" ||
-		session.GetValueFromTraits("birthdate") == "" {
-		return true
-	} else {
-		return false
-	}
-}
 func validationFieldErrors(err error) map[string]string {
 	if err == nil {
 		return map[string]string{}

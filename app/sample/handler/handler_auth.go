@@ -183,11 +183,11 @@ func (p *Provider) handleGetAuthRegistrationPasskey(w http.ResponseWriter, r *ht
 
 // Handler POST /auth/registration
 type handlePostAuthRegistrationRequestParams struct {
-	FlowID               string `validate:"required,uuid4"`
-	CsrfToken            string `validate:"required"`
-	Email                string `validate:"required,email" ja:"メールアドレス"`
-	Password             string `validate:"required" ja:"パスワード"`
-	PasswordConfirmation string `validate:"required" ja:"パスワード確認"`
+	FlowID               string        `validate:"required,uuid4"`
+	CsrfToken            string        `validate:"required"`
+	Traits               kratos.Traits `validate:"required"`
+	Password             string        `validate:"required" ja:"パスワード"`
+	PasswordConfirmation string        `validate:"required" ja:"パスワード確認"`
 }
 
 func (p *handlePostAuthRegistrationRequestParams) validate() map[string]string {
@@ -217,7 +217,7 @@ func (p *Provider) handlePostAuthRegistration(w http.ResponseWriter, r *http.Req
 	reqParams := handlePostAuthRegistrationRequestParams{
 		FlowID:               r.URL.Query().Get("flow"),
 		CsrfToken:            r.PostFormValue("csrf_token"),
-		Email:                r.PostFormValue("email"),
+		Traits:               traits,
 		Password:             r.PostFormValue("password"),
 		PasswordConfirmation: r.PostFormValue("password-confirmation"),
 	}
@@ -226,7 +226,7 @@ func (p *Provider) handlePostAuthRegistration(w http.ResponseWriter, r *http.Req
 		pkgVars.tmpl.ExecuteTemplate(w, "auth/registration/_form.html", viewParameters(session, r, map[string]any{
 			"RegistrationFlowID":   reqParams.FlowID,
 			"CsrfToken":            reqParams.CsrfToken,
-			"Email":                reqParams.Email,
+			"Traits":               traits,
 			"Password":             reqParams.Password,
 			"ValidationFieldError": validationFieldErrors,
 		}))
@@ -247,7 +247,7 @@ func (p *Provider) handlePostAuthRegistration(w http.ResponseWriter, r *http.Req
 		pkgVars.tmpl.ExecuteTemplate(w, "auth/registration/_form.html", viewParameters(session, r, map[string]any{
 			"RegistrationFlowID": reqParams.FlowID,
 			"CsrfToken":          reqParams.CsrfToken,
-			"Email":              reqParams.Email,
+			"Traits":             traits,
 			"Password":           reqParams.Password,
 			"ErrorMessages":      output.ErrorMessages,
 		}))

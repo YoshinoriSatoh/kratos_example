@@ -114,6 +114,8 @@ selfservice:
           - hook: require_verified_address
         password:
           default_browser_return_url: http://localhost:3000/
+        oidc:
+          default_browser_return_url: http://localhost:3000/
     logout:
       after:
         default_browser_return_url: http://localhost:3000/

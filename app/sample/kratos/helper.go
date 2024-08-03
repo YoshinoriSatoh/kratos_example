@@ -40,6 +40,7 @@ func getCsrfTokenFromFlowUi(ui uiContainer) string {
 			return node.Attributes.Value.(string)
 		}
 	}
+	slog.Error("Missing csrf_token")
 	return ""
 }
 
@@ -85,53 +86,53 @@ func getContinueWithVerificationFlowId(responseBody interface{}) string {
 			return ""
 		}
 
-// // readHttpResponseBody で取得したjson(interface{})から continue_with.verification_ui.flow.id を取得
-// func getContinueWithVerificationFlowId(responseBody interface{}) string {
-// 	b, ok := responseBody.(map[string]interface{})
-// 	if !ok {
-// 		slog.Error("Fail type assertion responseBody to map[string]interface{}")
-// 		return ""
-// 	}
+		// // readHttpResponseBody で取得したjson(interface{})から continue_with.verification_ui.flow.id を取得
+		// func getContinueWithVerificationFlowId(responseBody interface{}) string {
+		// 	b, ok := responseBody.(map[string]interface{})
+		// 	if !ok {
+		// 		slog.Error("Fail type assertion responseBody to map[string]interface{}")
+		// 		return ""
+		// 	}
 
-// 	continueWith, ok := b["continue_with"].([]interface{})
-// 	if !ok {
-// 		slog.Error("Fail type assertion continue_with to []interface{}")
-// 		return ""
-// 	}
+		// 	continueWith, ok := b["continue_with"].([]interface{})
+		// 	if !ok {
+		// 		slog.Error("Fail type assertion continue_with to []interface{}")
+		// 		return ""
+		// 	}
 
-// 	for _, v := range continueWith {
-// 		c, ok := v.(map[string]interface{})
-// 		if !ok {
-// 			slog.Error("Fail type assertion continue_with to map[string]interface{}")
-// 			return ""
-// 		}
+		// 	for _, v := range continueWith {
+		// 		c, ok := v.(map[string]interface{})
+		// 		if !ok {
+		// 			slog.Error("Fail type assertion continue_with to map[string]interface{}")
+		// 			return ""
+		// 		}
 
-// 		action, ok := c["action"].(string)
-// 		if !ok {
-// 			slog.Error("Fail type assertion action to string")
-// 			return ""
-// 		}
+		// 		action, ok := c["action"].(string)
+		// 		if !ok {
+		// 			slog.Error("Fail type assertion action to string")
+		// 			return ""
+		// 		}
 
-// 		flow, ok := c["flow"].(map[string]interface{})
-// 		if !ok {
-// 			slog.Error("Fail type assertion flow to map[string]interface{}")
-// 			return ""
-// 		}
+		// 		flow, ok := c["flow"].(map[string]interface{})
+		// 		if !ok {
+		// 			slog.Error("Fail type assertion flow to map[string]interface{}")
+		// 			return ""
+		// 		}
 
-// 		flowID, ok := flow["id"].(string)
-// 		if !ok {
-// 			slog.Error("Fail type assertion flow.id to string")
-// 			return ""
-// 		}
+		// 		flowID, ok := flow["id"].(string)
+		// 		if !ok {
+		// 			slog.Error("Fail type assertion flow.id to string")
+		// 			return ""
+		// 		}
 
-// 		if action == "show_verification_ui" {
-// 			return flowID
-// 		}
-// 	}
+		if action == "show_verification_ui" {
+			return flowID
+		}
+	}
 
-// 	slog.Error("Missing verification flow id")
-// 	return ""
-// }
+	slog.Error("Missing verification flow id")
+	return ""
+}
 
 // // refirect browser to を取得 (SDKバグ回避暫定用)
 // func getRedirectBrowserToFromHttpResponse(r *http.Response) string {

@@ -3,7 +3,7 @@
 
 <div class="container mx-auto px-24">
   <h2 class="text-lg text-center font-bold">プロフィール設定</h2>
-  {{if ne .Infomation ""}}
+  {{if and (ne .Infomation "") (ne .Infomation nil )}}
   <div class="alert alert-info mt-2">{{.Infomation}}</div>
   {{end}}
   {{template "my/profile/_form.html" .}}

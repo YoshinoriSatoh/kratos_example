@@ -189,7 +189,6 @@ func (p *Provider) GetRegistrationFlow(i GetRegistrationFlowInput) (GetRegistrat
 			}
 		}
 	}
-	output.CsrfToken = getCsrfTokenFromResponseBody(b)
 
 	// browser flowでは、kartosから受け取ったcookieをそのままブラウザへ返却する
 	output.Cookies = kratosOutput.Header["Set-Cookie"]
@@ -286,6 +285,7 @@ type UpdateRegistrationFlowInput struct {
 type UpdateRegistrationFlowOutput struct {
 	Cookies            []string
 	VerificationFlowID string
+	RedirectBrowserTo  string
 	ErrorMessages      []string
 }
 
@@ -477,17 +477,6 @@ func (p *Provider) GetVerificationFlow(i GetVerificationFlowInput) (GetVerificat
 	if kratosRespBody.State == "passed_challenge" {
 		output.IsUsedFlow = true
 	}
-
-	// SDKを使用しているので、本来は上記レスポンスの第一引数である
-	// *kratosclientgo.VerificationFlow から必要な値を取得するところだが、
-	// goのv1.0.0のSDKには不具合があるらしく、仕方ないのでhttp.Responseから取得している
-	// https://github.com/ory/sdk/issues/292
-	b, err := readHttpResponseBody(response)
-	if err != nil {
-		slog.Error(err.Error())
-		return output, err
-	}
-	output.CsrfToken = getCsrfTokenFromResponseBody(b)
 
 	// browser flowでは、kartosから受け取ったcookieをそのままブラウザへ返却する
 	output.Cookies = kratosOutput.Header["Set-Cookie"]

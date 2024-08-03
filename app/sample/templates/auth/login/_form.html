@@ -104,10 +104,6 @@
 {{end}}
 <form 
   id="login-form"
-  hx-post="/auth/login?flow={{.LoginFlowID}}&return_to={{.ReturnTo}}" 
-  hx-swap="outerHTML" 
-  hx-target="this"
-  hx-trigger="post_after_passkey_got_credential"
   class="mb-4"
 >
   <input
@@ -156,7 +152,11 @@
   </div>
 
   <div class="mx-auto text-center">
-    <button class="btn btn-primary btn-wide">ログイン</button>
+    <button
+      class="btn btn-primary btn-wide"
+      hx-post="/auth/login?flow={{.LoginFlowID}}&return_to={{.ReturnTo}}" 
+      hx-swap="outerHTML" 
+      hx-target="this">ログイン</button>
   </div>
 
   {{ template "_alert.html"}}
